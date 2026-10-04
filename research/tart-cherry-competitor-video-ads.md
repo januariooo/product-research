@@ -75,3 +75,23 @@ Opgeslagen in WinningHunter → "All Saved Ads". Alleen tart cherry extract-**ca
 | 1107715858417852 | Purely Nutrient | ES/SE | okt 2026 (nieuw) | Europese markt, uric acid-angle |
 
 Te verwijderen uit eerdere save (UK-targeting of geen capsules): 1786083279389677 (Ravea, GB), 2102671630607243 & 1376381821300013 (Nutrissa, incl. GB), 2024216478213621 (Vitalora, incl. GB), 1376144871357469 (Ilyra, incl. GB), 2112149409517098 (Rowe Casa, vloeibaar).
+
+---
+
+## Update 2: alleen bewezen ads – 30+ dagen actief, capsules, géén UK/IE
+Filter: video, `min_days_running=30`, gezien in sept/okt 2026, GB/IE uitgesloten. "Dagen" = eerste start → laatst gezien.
+
+| Ad-ID | Merk (pagina) | Product | Markt | Dagen | Opmerking |
+|---|---|---|---|---|---|
+| 2042436482990455 | GoodGrove ("Dr. Katherine Hale") | Tart cherry extract | US/AU/CA (+ALL) | 213 | Lang verhaal "father on allopurinol" |
+| 4199893823657679 | GoodGrove ("Dr. Katherine Hale") | Tart cherry extract | US/AU (+ALL) | 213 | Zelfde verhaal, andere video |
+| 2195327674574021 | GoodGrove ("Joint Health Club") | Tart cherry extract | US | 149 | Problem → mechanism → product praat |
+| 929136313215700 | GoodGrove ("Joint Health Club") | Tart cherry extract | US | 146 | Consistent top-3 ad van de pagina (rank 1–3) |
+| 1282519900460752 | Purora ("Toxically Masculine") | Blend: tart cherry + celery seed + chanca piedra | US | 186 | Uric acid-angle, social proof (4,7★ / 2.145 reviews) |
+| 1112775171047933 | Aveya | Blend: tart cherry + celery seed | US | 144 | Hook "cut out the beer, red meat… still flares" |
+| 1630013068115103 | Aveya | Blend | US | 148 | Hook "If your big toe randomly hurts…" |
+| 1381028620517120 | Aveya | Blend | US | 148 | Hook "walk like you're stepping on broken glass" |
+| 1768870464249571 | Elivora | Tart cherry capsules | ALL | 49 | Niche: joint pain na borstkanker-medicatie |
+| 1402537445403569 | Masadena ("Ray Thompson") | Tart cherry extract | US/CA | 40 | Gout-hook "chasing the wrong target" |
+
+**Uit "Saved Ads" halen (<30 dagen actief):** 987886417176843, 1099727849268227, 28166959376337188, 1369460872021301, 4608559939426032, 1694275442699184, 1458695176107145, 1516987180189320, 1107715858417852 — plus de 6 uit update 1.
