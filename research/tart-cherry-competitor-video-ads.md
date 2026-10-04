@@ -95,3 +95,27 @@ Filter: video, `min_days_running=30`, gezien in sept/okt 2026, GB/IE uitgesloten
 | 1402537445403569 | Masadena ("Ray Thompson") | Tart cherry extract | US/CA | 40 | Gout-hook "chasing the wrong target" |
 
 **Uit "Saved Ads" halen (<30 dagen actief):** 987886417176843, 1099727849268227, 28166959376337188, 1369460872021301, 4608559939426032, 1694275442699184, 1458695176107145, 1516987180189320, 1107715858417852 — plus de 6 uit update 1.
+
+---
+
+## Update 3: WINNING ADS – meerdere signalen tegelijk
+Criteria: tart cherry capsules · video · geen GB/IE-targeting · **30+ dagen** · WinningHunter-score **"Winning"** · verdict **"likely_scaling"** · **ad rank binnen het merk** (hoe dicht bij #1, hoe meer budget) gemiddeld over aug–sep 2026.
+
+Context GoodGrove (trygoodgrove.com): ~70k bezoekers/maand, geschatte omzet **$406k–690k/maand**, 169–217 actieve ads, groeiend. Let op: de GoodGrove-ads hieronder zijn rond 8–13 sep voor het laatst gezien (creatives geroteerd), maar draaiden daarvoor 4–7 maanden als top-ads.
+
+| # | Ad-ID | Pagina | Dagen | Rank (gem. aug–sep) | Format / hook |
+|---|---|---|---|---|---|
+| 1 | 1648226629834095 | GoodGrove "Joint Health Club" | 117 | **#1** (jul–sep elke dag #1) | **"Talking villain vs hero"**: "I'm allopurinol. Your doctor says I'm working…" → "Hi, I'm Tart Cherry." → cold-extracted, 90-dagen garantie, schaarste |
+| 2 | 929136313215700 | GoodGrove "Joint Health Club" | 146 | **#2–3** | **Product praat**: "If you're still getting gout flares after cutting your diet, you're solving the wrong problem…" |
+| 3 | 1385182582911877 | GoodGrove "Dr. Katherine Hale" | 210 | **#1–2** | **Tijdlijn**: "Here's how long it actually takes for tart cherry extract to calm a gout flare… first few days → 1–2 weeks → week three" |
+| 4 | 2739648036387620 | GoodGrove "Dr. Katherine Hale" | 210 | **#1–4** | Tijdlijn (variant: "Here's what happens to a gout flare when you start…") |
+| 5 | 1530250395369083 | GoodGrove "Joint Health Club" | 112 | ~#8 | **UGC-testimonial / "PhD friend"**: "This is how I went from flaring every month to two years of no flares…" |
+| 6 | 1445683413758083 | GoodGrove "Dr. Katherine Hale" | 205 | stijgend #59 → #6 | Tijdlijn-variant |
+| 7 | 7194802671027216 | Aveya (blend tart cherry + celery seed) | 148 | #1 (beperkte data) | Testimonial: "If you've ever had to walk like you're stepping on broken glass…" |
+| 8 | 1630013068115103 | Aveya | 148 | #2 (beperkte data) | "If your big toe randomly hurts, this might be for you…" |
+
+**Patronen in de winnaars**
+- 3 bewezen video-structuren: **villain-vs-hero (personificatie)**, **tijdlijn van resultaten**, **persoonlijk verhaal / "friend told me"**.
+- Vaste opbouw: pijnlijke herkenning (3AM, big toe, bedsheet) → "het is niet je dieet" → mechanisme → "most brands heat-process, 80% lost" → cold-extracted + lab tested → 90-dagen garantie → schaarste.
+- Lengte 60–95 s.
+- ⚠️ Alle winnaars gebruiken medische claims (gout, allopurinol, "clears crystals") — in de UK niet toegestaan. Structuur overnemen, claims vervangen door toegestane ervaringstaal.
