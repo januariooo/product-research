@@ -52,3 +52,26 @@ GoodGrove `987886417176843` en Ravea `1786083279389677` gebruiken **exact hetzel
 
 ## ⚠️ Compliance
 Concurrenten claimen openlijk dat het product jicht behandelt, uric acid-kristallen verwijdert en "zelfde enzym als allopurinol" raakt. Ook gebruiken ze nep-artsen als paginanaam. Dat zijn medische claims die in de EU/VS (FTC, EFSA, Meta-beleid) niet mogen en tot afgekeurde ads of accountbans kunnen leiden. **Neem wel de formats over, maar niet de claims.**
+
+---
+
+## Update: shortlist – alleen capsules, géén UK/IE-targeting
+Opgeslagen in WinningHunter → "All Saved Ads". Alleen tart cherry extract-**capsules**; ads die op GB/IE targeten zijn uitgesloten.
+
+| Ad-ID | Merk (pagina) | Markt | Live | Waarom |
+|---|---|---|---|---|
+| 2042436482990455 | GoodGrove ("Dr. Katherine Hale") | US/AU/CA | feb → sep 2026 (~213 d) | Langst lopende capsule-ad, advertorial-verhaal |
+| 2195327674574021 | GoodGrove ("Joint Health Club") | US | apr → sep (~149 d) | Probleem → mechanisme → product praat |
+| 987886417176843 | GoodGrove ("Melissa Hayes") | US | sep → nu | "Last day sale"-promo, pagina met 439 ads |
+| 1099727849268227 | GoodGrove ("Cedar Ridge Wellness Hub") | US | sep → nu | "Check yourself against this list"-hook |
+| 28166959376337188 | Rubisana ("Jane Parker. GP") | US | sep → nu | Rapid-fire Yes/No |
+| 1369460872021301 | Rubisana ("Jane Parker. GP") | US | sep → nu | "Disappointed by tart cherry before?" |
+| 4608559939426032 | Nutrivelle ("Dr Samantha Lewis") | AU/CA | sep → nu | Cold-pressed vs heat-dried |
+| 1694275442699184 | Nutrivelle ("Dr Samantha Lewis") | AU/CA | sep → nu | Zelfde angle, andere video |
+| 1402537445403569 | Masadena ("Ray Thompson") | US/CA | aug → nu (~40 d) | Gout-hook "chasing the wrong target" |
+| 1768870464249571 | Elivora | ALL | aug → sep | Nieuwe niche: joint pain na borstkanker-medicatie |
+| 1458695176107145 | Hippie Farms (Orchard Tart Cherry) | US | aug → nu | Review-led, "get your mornings back", 151 ads |
+| 1516987180189320 | Nature Heart | NZ | okt 2026 (nieuw) | "Most clinical research" angle |
+| 1107715858417852 | Purely Nutrient | ES/SE | okt 2026 (nieuw) | Europese markt, uric acid-angle |
+
+Te verwijderen uit eerdere save (UK-targeting of geen capsules): 1786083279389677 (Ravea, GB), 2102671630607243 & 1376381821300013 (Nutrissa, incl. GB), 2024216478213621 (Vitalora, incl. GB), 1376144871357469 (Ilyra, incl. GB), 2112149409517098 (Rowe Casa, vloeibaar).
