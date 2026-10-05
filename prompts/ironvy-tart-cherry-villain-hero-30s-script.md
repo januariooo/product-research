@@ -8,14 +8,22 @@
 
 ## Script
 
+Generated as **2 clips of 15 s**. Clip 2 continues from the last frame of clip 1 (video extension), with the same avatar reference, product reference and audio.
+
+### Clip 1 (0–15 s): VILLAIN · night, cool blue-grey · villain voice
 | Time | Shot | Voice-over | On-screen text |
 |---|---|---|---|
-| **0–5 s** | 3 AM on a bedside clock → man (late 50s) on the edge of the bed, holding his big toe. Cool blue-grey, dark. | 🦹 **Villain (uric acid):** *"I'm uric acid. You cut out the beer. The steak. The shellfish. And I'm still here."* | **Still getting flare-ups? 🍒** |
-| **5–11 s** | Bedsheet pulled off his feet → pint and steak pushed aside on the kitchen table. Slow push-in, red glow. | 🦹 *"Your diet only stops new uric acid coming in. It doesn't deal with what's already built up. So I keep coming back."* | – |
-| **11–13 s** | **Transition:** sunrise floods the kitchen, warm golden light. | 🍒 **Hero (tart cherry):** *"Hi. I'm tart cherry."* | – |
-| **13–21 s** | Bowl of Montmorency cherries → Ironvy bottle on the counter, label sharp. | 🍒 *"Packed with anthocyanins from Montmorency cherries, I help maintain healthy uric acid levels and support your joints."* | **Helps maintain healthy uric acid levels ✓**<br>**Supports joint health ✓** |
-| **21–26 s** | Two red capsules in his palm, glass of water → he easily puts his shoes on. | 🍒 *"3,600 milligrams per serving. No sugar like cherry juice. Just two capsules a day."* | **3,600 mg · 0 sugar · 2 caps a day** |
-| **26–30 s** | **CTA:** packshot of the bottle next to cherries, warm light. | 🍒 *"Ironvy Tart Cherry. Tap below before this batch sells out."* | **Try Ironvy 🍒** + Shop now |
+| **0–5 s** | 3 AM on a bedside clock → man (late 50s) on the edge of the bed, holding his big toe. | 🦹 *"I'm uric acid. You cut out the beer. The steak. The shellfish. And I'm still here."* | **Still getting flare-ups? 🍒** |
+| **5–12 s** | Bedsheet pulled off his feet → he limps into the kitchen, pint and steak pushed aside on the table. Slow push-in, red glow. | 🦹 *"Your diet only stops new uric acid coming in. It doesn't deal with what's already built up. So I keep coming back."* | – |
+| **12–15 s** | He sits down at the kitchen table, looks at the window; the first sunlight comes up behind the curtain. | (silence / low drone fading out) | – |
+
+### Clip 2 (15–30 s): HERO · same kitchen, warm sunrise · hero voice
+| Time | Shot | Voice-over | On-screen text |
+|---|---|---|---|
+| **15–17 s** | Continues from the last frame: the sun floods the kitchen with warm golden light. | 🍒 *"Hi. I'm tart cherry."* | – |
+| **17–23 s** | Bowl of Montmorency cherries → Ironvy bottle on the table, label sharp. | 🍒 *"Packed with anthocyanins from Montmorency cherries, I help maintain healthy uric acid levels and support your joints."* | **Helps maintain healthy uric acid levels ✓**<br>**Supports joint health ✓** |
+| **23–27 s** | Two red capsules in his palm, glass of water → he easily puts his shoes on. | 🍒 *"3,600 milligrams per serving. No sugar like cherry juice. Just two capsules a day."* | **3,600 mg · 0 sugar · 2 caps a day** |
+| **27–30 s** | **CTA:** packshot of the bottle next to cherries, warm light. | 🍒 *"Ironvy Tart Cherry. Tap below before this batch sells out."* | **Try Ironvy 🍒** + Shop now |
 
 ---
 
