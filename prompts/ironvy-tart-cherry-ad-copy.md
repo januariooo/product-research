@@ -1,26 +1,27 @@
 # Ironvy Tart Cherry Extract – Meta ad copy (UK, for the 3 remakes)
 
-Modelled on the GoodGrove copy ("Introducing GoodGrove Tart Cherry Extract – a cold-processed formula… 🍒 Calm Flares… 🍒 Clear Uric Acid…"), rewritten without health claims.
+Modelled on the GoodGrove copy ("Introducing GoodGrove Tart Cherry Extract… 🍒 Calm Flares… 🍒 Clear Uric Acid at the Source… 🍒 Prevent Future Flare-Ups"), using the Ironvy label claims.
 
 ## Primary text
-Introducing Ironvy Tart Cherry Extract 🍒
+Introducing Ironvy Tart Cherry Extract – a 10:1 Montmorency extract with powerful anthocyanins to help… 🍒
 
-🍒 3,600 mg tart cherry equivalent per serving `[CHECK]`
-🍒 Made from Montmorency tart cherries `[CHECK]`
-🍒 No juice, no added sugar – just 2 capsules a day
-🍒 60 capsules = a full month
+🍒 Maintain Healthy Uric Acid Levels – support your body every single day.
+🍒 Support Joint Health – for easier mornings and moving freely again.
+🍒 Support Rest & Recovery – so your nights feel calmer too.
 
-Swap the sugary cherry juice for something you'll actually stick to.
+✅ 3,600 mg whole tart cherry per serving
+✅ No sugar like cherry juice – just 2 vegan capsules a day
+✅ Vegan · Gluten free · Non-GMO · No artificial additives
 
-👉 Tap "Shop now" to try Ironvy.
+👉 Tap "Shop now" – small UK brand, limited stock.
 
 ## Headlines (test 3)
-1. Tart cherry, without the sugar
-2. Your new 10-second morning ritual
+1. Support healthy uric acid levels, naturally
+2. Tart cherry, without the sugar
 3. 3,600 mg. Two capsules. Done.
 
 ## Description
-Montmorency tart cherry extract · 60 capsules · UK delivery `[CHECK]`
+Montmorency tart cherry extract · 60 vegan capsules · Shipped from London
 
-## Don't use
-"gout", "flare", "uric acid", "inflammation", "joint pain", "sleep better", "recovery" as a promised effect, "clinically proven", references to medicines, "doctor recommended".
+## Not included (higher risk)
+"stops/prevents flare-ups", "clears uric acid crystals", "cures gout", "instead of / better than allopurinol", "no side effects", "clinically proven", "doctor recommended".

@@ -2,37 +2,38 @@
 
 | Field | Value |
 |---|---|
-| Product | Ironvy Tart Cherry Extract (3,600 mg equivalent per serving, 60 capsules, 2 a day) |
+| Product | Ironvy Tart Cherry Extract – 360 mg Montmorency 10:1 extract (= 3,600 mg whole fruit) per 2 vegan capsules, 60 caps / 30 servings |
 | Based on | GoodGrove ad `1530250395369083` (brand rank ~#8, 112 days) + Aveya `7194802671027216` (#1, 148 days) |
-| Avatar | UGC creator, British man aged 55–65, talking head in car or garden |
-| Format | Vertical 9:16, ~55 s |
-| Hook | "I'd tried everything for my mornings. Then my mate who reads every study going told me this." |
-| CTA | "It's Ironvy. Link's below if you want to have a look." |
+| Avatar | UGC creator, British man 55–65, talking head in car / garden |
+| Format | Vertical 9:16, ~60 s |
+| Hook | "This is how I went from dreading every morning to actually getting on with my day." |
+| CTA | "It's Ironvy. Go grab it if it's still in stock." |
 
-> ⚠️ **Remake rule:** the original says "two years without flares" and "my PhD friend fixed his gout". Here the structure stays (frustration → friend's advice → why this one → it stuck), without a medical result.
+> Claims used (Ironvy label): **Joint Health · Helps Maintain Healthy Uric Acid Levels · Supports Rest & Recovery**.
 
 ---
 
 ## 1. Master video-generation prompt (copy-paste)
 
-> Vertical 9:16 selfie-style UGC video, 55 seconds. A down-to-earth British man aged 60, short grey hair, slightly weathered face, wearing a green gilet over a checked shirt, filming himself sitting in the driver's seat of a parked car (then later in his back garden by a shed). Overcast soft British daylight. He talks straight to camera like he's telling a mate down the pub. Intercut B-roll: him swapping a glass of supermarket cherry juice for a dark red Ironvy Tart Cherry Extract bottle, two red capsules in his palm, him gardening and carrying a watering can, a close-up of fresh Montmorency cherries. Handheld, authentic, slightly imperfect framing, 4K, natural colours.
+> Vertical 9:16 selfie-style UGC video, 60 seconds. A down-to-earth British man aged 60, short grey hair, slightly weathered face, wearing a green gilet over a checked shirt, filming himself in the driver's seat of a parked car, later in his back garden by a shed. Overcast soft British daylight. He talks straight to camera like he's telling a mate down the pub. Intercut B-roll: him wincing as he steps out of bed at 3 AM, a pint and a plate of red meat pushed away, him on the phone to a friend, a dark red IRONVY Tart Cherry Extract bottle on the kitchen counter, two red capsules in his palm, him gardening and carrying a watering can, fresh Montmorency cherries. Handheld, authentic, slightly imperfect framing, 4K, natural colours.
 
-**Negative prompt:** studio lighting, polished commercial, doctor's office, distorted label, extra fingers, American accent cues, text artifacts.
+**Negative prompt:** studio lighting, polished commercial, doctor's office, prescription bottle, distorted label, extra fingers, text artifacts.
 
 ---
 
-## 2. Script and shot list (~55 s)
+## 2. Script and shot list (~60 s)
 
 | Time | Shot | Voice-over / on-screen text | Direction |
 |---|---|---|---|
-| 0–5 s | **HOOK.** Selfie in car | 🎙 *"I'd tried everything to make my mornings feel easier. Then my mate, who reads every study going, told me this."*<br>📝 **What my mate told me 🍒** | Conspiratorial, leaning in |
-| 5–14 s | Talking head | 🎙 *"Sixty, still on my feet all day in the garden, but getting going in the morning was taking longer and longer. I'd cut back on the pints, eaten better. Fine. But I wanted something simple I'd actually stick to."* | Relatable, honest |
-| 14–24 s | B-roll: cherry juice in glass → swapped for bottle | 🎙 *"He said: 'You're drinking cherry juice? Mate, that's a load of sugar. If you want tart cherry, take it as a capsule.'"* | Friend's line in a slightly different voice/wink |
-| 24–36 s | Bottle close-up, capsules in palm, Montmorency cherries | 🎙 *"And he told me what to look for: Montmorency tart cherries `[CHECK]`, a proper dose, no added sugar. The one that ticked every box was Ironvy, 3,600 milligrams equivalent per serving `[CHECK]`."*<br>📝 **Montmorency · 3,600 mg · 0 sugar** | Product sharp |
-| 36–46 s | Garden, watering can, smiling | 🎙 *"That was three months ago. Two capsules with breakfast, every day. It's the only supplement I've never given up on."* | Satisfied, understated |
-| 46–55 s | **CTA.** Back in car | 🎙 *"So that's my mate's advice, passed on. It's Ironvy. Link's below if you want to have a look."*<br>📝 **Try Ironvy 🍒** + button | Thumbs up, natural |
+| 0–5 s | **HOOK.** Selfie in car | 🎙 *"This is how I went from dreading every morning to actually getting on with my day."*<br>📝 **What finally helped my joints 🍒** | Leaning in, honest |
+| 5–15 s | B-roll 3 AM out of bed, pint + steak pushed away | 🎙 *"It wasn't cutting the pints. Wasn't cutting the red meat. Wasn't chugging water all day. I'd done all that, and I was still waking up at 3 AM with my big toe on fire."* | Frustration, recognisable |
+| 15–23 s | On the phone to a friend | 🎙 *"So I rang my mate, who's read every study going on this stuff, and said: look, I'm done, I need a real answer."* | Story tension |
+| 23–35 s | Talking head garden | 🎙 *"He said: diet only slows down new uric acid. You need something that helps your body maintain healthy uric acid levels day to day. And the most researched natural option? Tart cherry. Montmorency, specifically."*<br>📝 **Helps maintain healthy uric acid levels ✓** | "Aha" moment |
+| 35–45 s | Bottle close-up, capsules in palm | 🎙 *"But not the juice, that's loaded with sugar. A proper extract. The one he pointed me to was Ironvy: 10-to-1 extract, 3,600 milligrams per serving, two vegan capsules a day."*<br>📝 **3,600 mg · 0 sugar · 2 caps** | Product sharp |
+| 45–53 s | Gardening, watering can, smiling | 🎙 *"Three months on, my joints feel better, I'm sleeping through the night, and I'm back out in the garden every morning. It supports joint health and rest and recovery, and honestly, I feel it."*<br>📝 **Supports joint health ✓ · rest & recovery ✓** | Satisfied, understated |
+| 53–60 s | **CTA.** Back in car | 🎙 *"They're a small UK company, so stock goes fast. It's Ironvy. Go grab it if it's still in stock."*<br>📝 **Try Ironvy 🍒** + button | Thumbs up |
 
-**Cut to 30 s:** 0–5 → 14–36 → 46–55.
+**Cut to 30 s:** 0–5 → 23–45 → 53–60.
 
 ---
 
@@ -50,10 +51,9 @@ Use this image as the reference for character consistency across all shots.
 - No music, or a very subtle acoustic bed at -24 dB (car ambience works).
 
 ## 5. Captions
-Burned-in captions throughout: bold white sans-serif with a soft shadow, 2–4 words per line, centred in the lower third and inside the safe zone.
+Burned-in captions throughout: bold white sans-serif with a soft shadow, 2–4 words per line, centred in the lower third and inside the safe zone. Claims with a red ✓.
 
-## 6. Compliance notes (UK)
-- **Don't** say "gout", "flares", "joint pain" or "inflammation", and don't refer to a medicine.
-- "Reads every study going" is fine; "my PhD friend fixed his gout" is not (an implied medical claim + endorsement).
-- AI avatar as a persona: add "#ad" and don't present it as a real customer review.
-- Verify product facts (`[CHECK]`).
+## 6. Compliance notes (UK) – conscious choice by Ironvy
+- Uses the label claims (joint health, uric acid, rest & recovery): **not authorised** in GB → risk of rejection/ASA. Accepted for the test.
+- "Big toe on fire" describes the problem; the video does **not** promise that flare-ups stop or that gout is cured.
+- AI avatar as a "customer": add "#ad"; don't present it as a real customer review.
