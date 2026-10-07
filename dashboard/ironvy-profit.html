@@ -23,6 +23,7 @@
   --good:#0f9f57; --mid:#a8740c; --bad:#d23434;
   --s-net:#7b4fe0; --s-ad:#2e6be6; --s-cogs:#a8691f; --s-ret:#d23434; --s-profit:#0f9f57; color-scheme:light}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:13.5px;line-height:1.45}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -107,7 +108,8 @@ tr:last-child td{border-bottom:0}
 .search input{background:none;border:0;outline:0;width:100%;font-size:12.5px}
 .empty{color:var(--muted);font-size:13px;padding:18px 4px;text-align:center}
 .note{color:var(--muted);font-size:12.5px;margin:0}
-.warnbox{border:1px solid rgba(232,179,61,.4);background:rgba(232,179,61,.08);border-radius:10px;padding:10px 12px;font-size:12.5px;display:flex;gap:8px;align-items:flex-start}
+.warnbox{border:1px solid rgba(232,179,61,.4);background:rgba(232,179,61,.08);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.6}
+.warnbox a{color:inherit;font-weight:700}
 .errbox{border:1px solid rgba(255,93,93,.4);background:rgba(255,93,93,.08);border-radius:10px;padding:10px 12px;font-size:12.5px}
 .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:640px){.form{grid-template-columns:minmax(0,1fr)}}
@@ -138,6 +140,8 @@ tr:last-child td{border-bottom:0}
 .trace{font:11.5px var(--f-num);color:var(--muted);margin-top:6px}
 .toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:20}
 .skel{color:var(--dim)}
+body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
+#testWrap input{accent-color:var(--mid);margin:0}
 @media (max-width:720px){
   .app{grid-template-columns:minmax(0,1fr)}
   nav.side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;justify-content:space-around;border-right:0;border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:10}
@@ -178,11 +182,13 @@ tr:last-child td{border-bottom:0}
         <select id="prodFilter" aria-label="Product"><option value="">Alle producten</option></select>
       </label>
       <label class="chipsel" id="ccyWrap">Valuta <select id="dispCcy" aria-label="Valuta"><option value="GBP">£ GBP</option><option value="EUR">€ EUR</option></select></label>
+      <label class="chipsel" id="testWrap" title="Verzonnen verkopen en ads, los van je echte data"><input type="checkbox" id="testMode"> Testmodus</label>
       <div class="grow"></div>
       <div class="status" id="status"><span><i class="dot" id="dShop"></i>Shopify</span><span><i class="dot" id="dMeta"></i>Meta</span><span id="stamp"></span></div>
       <button class="btn" id="reload" type="button">Vernieuwen</button>
     </div>
 
+    <div id="testBanner" class="warnbox" hidden><span><b>Testmodus.</b> Je ziet verzonnen verkopen en Meta-advertenties. Inkoop, kosten, koppelingen en instellingen die je nu invult worden apart opgeslagen en raken je echte data niet. Zet de schakelaar uit om terug te gaan.</span></div>
     <div id="pageErr" class="errbox" hidden></div>
 
     <!-- DASHBOARD -->
@@ -470,11 +476,67 @@ async function windsor(input, onWait){
   throw {code:"server_unavailable"};
 }
 
+/* ---------- test mode: generated sales + ads, stored settings under test_* paths ---------- */
+let TEST = false;
+try { TEST = localStorage.getItem("ivp-test") === "1"; } catch {}
+const colName = c => TEST ? "test_" + c : c;
+const settingsPath = () => TEST ? "config/test_settings" : "config/settings";
+const T = {pid:"11662631698773", title:"Tart Cherry Extract Food Supplement", priceEur:47.18, ordersPerDay:10, unitsPerOrder:3, freeUnits:1, returnRate:0.03, adEurPerDay:75,
+  campaign:"Tart Cherry – Prospecting (test)", cid:"test_cmp_1"};
+function rng(seed){ let h = 2166136261; for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return () => { h += 0x6D2B79F5; let t = h; t = Math.imul(t ^ t>>>15, t|1); t ^= t + Math.imul(t ^ t>>>7, t|61); return ((t ^ t>>>14)>>>0)/4294967296; }; }
+const TEST_ADS = Array.from({length:20}, (_, i) => {
+  const k = i + 1, r = rng("ad"+k);
+  const name = k <= 12 ? `Tart Cherry – UGC hook ${k}` : k <= 16 ? `Tart Cherry – Static ${k-12}` : `Tart Cherry – Carousel ${k-16}`;
+  const tier = [1,4,7,11,15].includes(k) ? 3.4 + r()*1.8 : [2,5,9,13,17,19,8,20].includes(k) ? 1.8 + r()*0.9 : 0.4 + r()*1.1;
+  return {aid:"test_ad_"+k, ad:name, weight:0.4 + r()*1.6, roas:tier};
+});
+function genTest(){
+  const R = st.range, rate = parseFloat(st.settings.eurRate) || 1.17, P = T.priceEur / rate, t = today();
+  const daily = [], ads = [];
+  const wsum = TEST_ADS.reduce((a,x)=>a+x.weight,0);
+  const start = R.prevFrom < addDays(t,-200) ? addDays(t,-200) : R.prevFrom;
+  for (let d = start; d <= R.to && d <= t; d = addDays(d,1)){
+    const r = rng("day"+d), dow = new Date(d+"T00:00:00Z").getUTCDay();
+    const partial = d === t ? Math.min(1, (new Date().getHours()+1)/24) : 1;
+    const orders = Math.max(0, Math.round((T.ordersPerDay + (r()-0.5)*6 + (dow===0||dow===6?1.5:0)) * partial));
+    let returned = 0; for (let i = 0; i < orders; i++) if (r() < T.returnRate) returned++;
+    const gross = orders*T.unitsPerOrder*P, disc = orders*T.freeUnits*P, ret = returned*(T.unitsPerOrder-T.freeUnits)*P;
+    const net = gross - disc - ret;
+    daily.push({day:d, total_sales:net, net_sales:net, gross_sales:gross, returns:-ret, orders, _units:(orders - returned)*T.unitsPerOrder});
+    for (const a of TEST_ADS){
+      const ra = rng(a.aid+d), spend = T.adEurPerDay * a.weight/wsum * (0.8 + ra()*0.4) * partial;
+      const value = spend * a.roas * (0.7 + ra()*0.6);
+      ads.push({date:d, cid:T.cid, campaign:T.campaign, aid:a.aid, ad:a.ad, adset:"Broad – NL/UK", spend, imp:Math.round(spend*90), clicks:Math.round(spend*1.6), purch:Math.round(value/(T.priceEur*2)), value, ccy:"EUR"});
+    }
+  }
+  const inR = daily.filter(r => inRange(r.day, R.from, R.to));
+  const sum = k => inR.reduce((a,r)=>a+n(r[k]),0);
+  st.shopDaily = daily;
+  st.shopProducts = [{product_id:T.pid, product_title:T.title, product_variant_sku:"TC-60", net_items_sold:sum("_units"), gross_sales:sum("gross_sales"), net_sales:sum("net_sales"), returns:sum("returns"), total_sales:sum("total_sales"), orders:sum("orders")}];
+  st.monthSales = daily.filter(r => r.day >= t.slice(0,8)+"01");
+  st.ads = ads; st.adCurrency = "EUR"; st.metaState = "ok"; st.shopOk = true;
+  $("dShop").className = "dot ok"; $("dMeta").className = "dot ok";
+  $("stamp").textContent = "Testdata";
+  renderAll();
+}
+function applyCatalog(){
+  if (TEST){
+    const real = (st.realCatalog||[]).find(p => p.id === T.pid);
+    st.catalog = [{id:T.pid, title:T.title, status:"TEST", img:real?.img || "", price:T.priceEur/(parseFloat(st.settings.eurRate)||1.17), sku:"TC-60"}];
+  } else st.catalog = st.realCatalog || [];
+  const sel = $("prodFilter"), cur = sel.value;
+  sel.innerHTML = `<option value="">Alle producten</option>` + st.catalog.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("");
+  sel.value = st.catalog.some(p => p.id === cur) ? cur : "";
+  renderCogs(); renderMapProducts(); renderAll();
+}
+
 /* ---------- loading ---------- */
 let loadSeq = 0;
 async function loadAll(){
   computeRange();
   const seq = ++loadSeq, R = st.range;
+  if (TEST){ genTest(); return; }
+  if (!mcp) return;
   $("stamp").textContent = "Laden…";
   const monthStart = today().slice(0,8)+"01";
   const shopP = Promise.all([
@@ -511,14 +573,13 @@ async function loadCatalog(){
       (p.edges||[]).forEach(({node}) => all.push({id:String(node.id).split("/").pop(), title:node.title, status:node.status, img:node.featuredMedia?.preview?.image?.url || "", price:n(node.priceRangeV2?.minVariantPrice?.amount), sku:node.variants?.edges?.[0]?.node?.sku || ""}));
       if (!p.pageInfo?.hasNextPage) break; after = p.pageInfo.endCursor;
     }
-    st.catalog = all;
-    const sel = $("prodFilter"), cur = sel.value;
-    sel.innerHTML = `<option value="">Alle producten</option>` + all.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("");
-    sel.value = cur;
-    renderCogs(); renderMapProducts(); renderAll();
+    st.realCatalog = all;
+    applyCatalog();
   } catch(e){ $("cogsTable").innerHTML = `<div class="errbox">${esc(errMsg("Shopify", e))}</div>`; }
 }
 async function loadMetaAccount(){
+  if (TEST){ st.metaAccount = "Testaccount (verzonnen)"; renderConn(); return; }
+  if (!mcp) return;
   try {
     const r = await mcp.callTool(WIN, WCONN, {include_actions:false, include_options:false}, {cache:{staleTime:300000, gcTime:3600000}});
     const list = findRows(r.payload) || [];
@@ -796,7 +857,7 @@ async function saveCogs(id){
   const p = st.catalog.find(x => x.id === id);
   const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), updatedAt:Date.now()};
   if (body.unitCost == null){ toast("Vul een inkoopprijs in."); return; }
-  await write(() => db.collection("cogs").doc(id).set(body), "Inkoopprijs opgeslagen");
+  await write(() => db.collection(colName("cogs")).doc(id).set(body), "Inkoopprijs opgeslagen");
 }
 
 /* ---------- Ads mapping ---------- */
@@ -826,7 +887,7 @@ function renderAdsList(){
       <div class="grow"><b>${esc(g.name)}</b><small>${g.sub?esc(g.sub)+" · ":""}Uitgaven ${fd(g.spend)}${g.value?` · ROAS ${(g.value/g.spend||0).toLocaleString("nl-NL",{maximumFractionDigits:2})}`:""}</small></div>
       ${pid ? `<span class="badge good" title="${esc(prod?.title||"")}">Gekoppeld${prod?": "+esc(prod.title.slice(0,18)):""}</span>${st.mappings[g.key]?`<button class="btn ghost" type="button" data-unmap="${esc(g.key)}" style="padding:3px 8px">×</button>`:""}` : `<span class="badge na">Niet gekoppeld</span>`}</label>`; }).join("");
   list.querySelectorAll("[data-ad]").forEach(c => c.onchange = () => { c.checked ? st.selAds.add(c.dataset.ad) : st.selAds.delete(c.dataset.ad); c.closest(".item").classList.toggle("sel", c.checked); updateAssign(); });
-  list.querySelectorAll("[data-unmap]").forEach(b => b.onclick = ev => { ev.preventDefault(); write(() => db.collection("mappings").doc(b.dataset.unmap).delete(), "Koppeling verwijderd"); });
+  list.querySelectorAll("[data-unmap]").forEach(b => b.onclick = ev => { ev.preventDefault(); write(() => db.collection(colName("mappings")).doc(b.dataset.unmap).delete(), "Koppeling verwijderd"); });
   updateAssign();
 }
 function renderMapProducts(){
@@ -843,7 +904,7 @@ function updateAssign(){ $("assignBtn").disabled = !(st.selAds.size && st.selPro
 $("assignBtn").onclick = async () => {
   const pid = st.selProduct, keys = [...st.selAds];
   const groups = adGroups();
-  await write(() => Promise.all(keys.map(k => db.collection("mappings").doc(k).set({productId:pid, level:k.startsWith("ad_")?"ad":"campaign", name:groups.find(g=>g.key===k)?.name||"", at:Date.now()}))), `${keys.length} gekoppeld`);
+  await write(() => Promise.all(keys.map(k => db.collection(colName("mappings")).doc(k).set({productId:pid, level:k.startsWith("ad_")?"ad":"campaign", name:groups.find(g=>g.key===k)?.name||"", at:Date.now()}))), `${keys.length} gekoppeld`);
   st.selAds.clear(); renderAdsList();
 };
 document.querySelectorAll(".tabs [data-lvl]").forEach(b => b.onclick = () => { st.adLevel = b.dataset.lvl; st.selAds.clear(); document.querySelectorAll(".tabs [data-lvl]").forEach(x => x.setAttribute("aria-selected", String(x===b))); renderAdsList(); });
@@ -869,7 +930,7 @@ function renderExpenses(){
     : `<p class="empty">Nog geen kosten. Voeg je apps, abonnementen en andere vaste lasten toe.</p>`;
   $("expTable").querySelectorAll("[data-edit]").forEach(b => b.onclick = () => openExp(st.expenses.find(e => e.id === b.dataset.edit)));
   $("expTable").querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
-    if (b.dataset.confirm){ write(() => db.collection("expenses").doc(b.dataset.del).delete(), "Kostenpost verwijderd"); }
+    if (b.dataset.confirm){ write(() => db.collection(colName("expenses")).doc(b.dataset.del).delete(), "Kostenpost verwijderd"); }
     else { b.dataset.confirm = "1"; b.textContent = "Zeker?"; b.style.color = "var(--bad)"; setTimeout(() => { if (b.isConnected){ delete b.dataset.confirm; b.textContent = "Verwijderen"; b.style.color = ""; } }, 3000); }
   });
 }
@@ -886,7 +947,7 @@ $("exFilter").onchange = renderExpenses;
 $("expF").onsubmit = async ev => {
   ev.preventDefault();
   const body = {name:$("exName").value.trim(), category:$("exCat").value, amount:fromDisp($("exAmt").value), startDate:$("exStart").value, recurring:$("exRec").checked, frequency:$("exRec").checked?$("exFreq").value:null, status:$("exStatus").value, notes:$("exNotes").value.trim(), updatedAt:Date.now()};
-  const ref = st.editExp ? db.collection("expenses").doc(st.editExp) : db.collection("expenses").doc();
+  const ref = st.editExp ? db.collection(colName("expenses")).doc(st.editExp) : db.collection(colName("expenses")).doc();
   const ok = await write(() => ref.set(body), "Kostenpost opgeslagen");
   if (ok) $("expForm").hidden = true;
 };
@@ -901,7 +962,7 @@ function renderConn(){
 }
 async function saveSettings(keys, msg){
   const body = {}; for (const k of keys) body[k] = MONEY_SETTINGS.includes(k) ? fromDisp($(SFIELDS[k]).value) : n($(SFIELDS[k]).value);
-  await write(() => db.doc("config/settings").set({...st.settings, ...body, updatedAt:Date.now()}), msg);
+  await write(() => db.doc(settingsPath()).set({...(TEST ? (st.testSettings||{}) : (st.realSettings||{})), ...body, updatedAt:Date.now()}), msg);
 }
 $("saveSettings").onclick = () => saveSettings(["fx","eurRate","goalRev","goalProfit","roasHi","roasLo","profHi","profLo"], "Instellingen opgeslagen");
 $("saveFees").onclick = () => saveSettings(["feePct","feeFix"], "Transactiekosten opgeslagen");
@@ -910,8 +971,8 @@ $("saveFallback").onclick = () => saveSettings(["fallbackPct"], "Opgeslagen");
 /* ---------- watchlist ---------- */
 async function togglePin(id){
   if (!db) return;
-  if (st.watch[id]) await write(() => db.collection("watchlist").doc(id).delete(), "Losgemaakt");
-  else await write(() => db.collection("watchlist").doc(id).set({at:Date.now()}), "Vastgepind");
+  if (st.watch[id]) await write(() => db.collection(colName("watchlist")).doc(id).delete(), "Losgemaakt");
+  else await write(() => db.collection(colName("watchlist")).doc(id).set({at:Date.now()}), "Vastgepind");
 }
 
 /* ---------- db plumbing ---------- */
@@ -925,12 +986,21 @@ async function write(fn, msg){
     return false;
   }
 }
+let unsubs = [];
+function mergeSettings(){
+  const real = st.realSettings || {};
+  st.settings = TEST ? {...DEFAULTS, ...(st.testSettings||{}), eurRate:real.eurRate ?? DEFAULTS.eurRate, eurRateDate:real.eurRateDate} : {...DEFAULTS, ...real};
+  fillSettings(); applyCcy(false); if (TEST && st.range.from) genTest(); renderAll(); if (st.catalog.length) renderCogs();
+}
 function subscribe(){
-  db.doc("config/settings").onSnapshot(s => { st.settings = {...DEFAULTS, ...(s.exists ? s.data() : {})}; fillSettings(); applyCcy(false); renderAll(); if (st.catalog.length) renderCogs(); }, dbErr);
-  db.collection("cogs").onSnapshot(s => { st.cogs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderCogs(); renderAll(); renderMapProducts(); }, dbErr);
-  db.collection("expenses").onSnapshot(s => { st.expenses = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); }, dbErr);
-  db.collection("mappings").onSnapshot(s => { st.mappings = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderAll(); renderMapProducts(); }, dbErr);
-  db.collection("watchlist").onSnapshot(s => { st.watch = Object.fromEntries(s.docs.map(d => [d.id, true])); renderDashboard(); }, dbErr);
+  unsubs.forEach(u => u()); unsubs = [];
+  const on = (ref, fn) => unsubs.push(ref.onSnapshot(fn, dbErr));
+  on(db.doc("config/settings"), s => { st.realSettings = s.exists ? s.data() : {}; mergeSettings(); });
+  if (TEST) on(db.doc("config/test_settings"), s => { st.testSettings = s.exists ? s.data() : {}; mergeSettings(); });
+  on(db.collection(colName("cogs")), s => { st.cogs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderCogs(); renderAll(); renderMapProducts(); });
+  on(db.collection(colName("expenses")), s => { st.expenses = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); });
+  on(db.collection(colName("mappings")), s => { st.mappings = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderAll(); renderMapProducts(); });
+  on(db.collection(colName("watchlist")), s => { st.watch = Object.fromEntries(s.docs.map(d => [d.id, true])); renderDashboard(); });
 }
 function dbErr(e){ if (e?.code === "revoked" || e?.code === "not_granted") showPageErr("Je opgeslagen instellingen zijn in deze weergave niet beschikbaar."); }
 let toastT; function toast(m){ const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
@@ -985,12 +1055,12 @@ async function setupAsk(){
       kosten: st.expenses.map(e => ({naam:e.name, categorie:e.category, bedrag:e.amount, terugkerend:e.recurring, frequentie:e.frequency, start:e.startDate, status:e.status})),
       advertentiecampagnes: (() => { const m = new Map(); st.ads.filter(a => inRange(a.date,R.from,R.to)).forEach(a => { const o = m.get(a.cid) || {campagne:a.campaign, uitgaven:0, aankopen:0, waarde:0}; o.uitgaven += a.spend; o.aankopen += a.purch; o.waarde += a.value; m.set(a.cid,o); }); return [...m.values()]; })(),
       advertentievaluta: st.adCurrency, wisselkoers_naar_gbp: st.settings.fx};
-    const tools = [{
+    const tools = TEST ? [] : [{
       name:"shopifyql", description:"Voert één ShopifyQL-query uit op de Ironvy-winkel en geeft {columns, rows}. Syntax: FROM <sales|sessions|orders|customers|inventory> SHOW <metrics> [GROUP BY ..] [TIMESERIES day|week|month] SINCE <-30d|YYYY-MM-DD> UNTIL <today|YYYY-MM-DD> [COMPARE TO previous_period]. Percentages zijn ratio's. Bedragen in GBP.",
       inputSchema:{type:"object", properties:{query:{type:"string"}}, required:["query"]},
       async execute(input, c){ $("trace").textContent = "Shopify: " + input.query; try { const r = await mcp.callTool(SHOP, SQL, {query:String(input.query||"")}, {signal:c.signal}); const p = r.payload||{}; return {columns:(p.columns||[]).map(x=>x.name), rows:(p.rows||[]).slice(0,200)}; } catch(e){ throw new Error(errMsg("Shopify", e)); } }
     }];
-    const prompt = `Je bent de e-commerce-analist van Ironvy (Shopify, GBP). Vandaag is ${today()}.
+    const prompt = `Je bent de e-commerce-analist van Ironvy (Shopify, GBP). Vandaag is ${today()}.${TEST ? "\nLET OP: de app staat in TESTMODUS. Alle cijfers hieronder zijn verzonnen testdata; zeg dat er kort bij. Er is geen Shopify-tool beschikbaar." : ""}
 Hieronder staat de winstdata die de app al berekend heeft (nettowinst = netto omzet − inkoop − ads − transactiekosten − vaste lasten). Gebruik de shopifyql-tool alleen als je extra Shopify-cijfers nodig hebt. Verzin nooit cijfers; zeg het als data ontbreekt (bijv. ontbrekende inkoopprijzen).
 Alle bedragen in DATA zijn GBP. ${disp==="EUR"?`De gebruiker kijkt in euro: noem bedragen in EUR, omgerekend tegen 1 GBP = ${rateNow()} EUR.`:""}
 Antwoord in het Nederlands: eerst de kernconclusie in 1–2 zinnen, dan de cijfers, dan maximaal 3 concrete acties.
@@ -999,7 +1069,7 @@ DATA:
 ${JSON.stringify(ctx).slice(0, 60000)}
 
 VRAAG: ${question}`;
-    try { await sample(prompt, {tools, signal:ctl.signal, cache:false, onText:({text}) => { $("answer").textContent = text; $("trace").textContent = ""; }}); }
+    try { await sample(prompt, {...(tools.length ? {tools} : {}), signal:ctl.signal, cache:false, onText:({text}) => { $("answer").textContent = text; $("trace").textContent = ""; }}); }
     catch(e){ $("answer").textContent = e.text || ""; const m = {not_granted:"Je hebt Claude niet toegestaan voor deze pagina.", rate_limited:"Te veel vragen tegelijk, probeer het zo opnieuw.", cancelled:""}; const msg = e.code in m ? m[e.code] : "De analyse is niet afgerond. Probeer het opnieuw."; if (msg) $("trace").textContent = msg; }
     finally { $("askBtn").disabled = false; $("stopBtn").hidden = true; }
   };
@@ -1007,14 +1077,24 @@ VRAAG: ${question}`;
 
 /* ---------- boot ---------- */
 route(); renderLegend(); fillSettings();
+$("testMode").checked = TEST; $("testBanner").hidden = !TEST; document.body.classList.toggle("testing", TEST);
 (async () => {
   setupAsk();
   const [m, d, u] = await Promise.all([claude.use("mcp"), claude.use("db"), claude.use("user")]);
   mcp = m; db = d;
   if (u){ try { const w = await u.can("data.write"); if (w === false) canWrite = false; } catch {} }
   if (db) subscribe(); else showPageErr("Opgeslagen inkoopprijzen en kosten zijn in deze weergave niet beschikbaar. Open de app in Claude.");
-  if (!mcp){ showPageErr("Deze weergave kan Shopify en Meta niet bereiken. Open de app in claude.ai."); $("stamp").textContent = "Geen live verbinding"; return; }
-  loadAll(); loadCatalog(); loadMetaAccount();
+  $("testMode").onchange = () => {
+    TEST = $("testMode").checked; try { localStorage.setItem("ivp-test", TEST ? "1" : "0"); } catch {}
+    $("testBanner").hidden = !TEST; document.body.classList.toggle("testing", TEST);
+    $("pageErr").hidden = true;
+    st.cogs = {}; st.expenses = []; st.mappings = {}; st.watch = {}; st.ads = []; st.selAds.clear(); st.selProduct = null; st.testSettings = null;
+    if (db) subscribe(); else mergeSettings();
+    applyCatalog(); loadAll(); loadMetaAccount();
+    if (!mcp && !TEST){ showPageErr("Deze weergave kan Shopify en Meta niet bereiken. Open de app in claude.ai."); $("stamp").textContent = "Geen live verbinding"; }
+  };
+  if (!mcp && !TEST){ showPageErr("Deze weergave kan Shopify en Meta niet bereiken. Open de app in claude.ai."); $("stamp").textContent = "Geen live verbinding"; return; }
+  applyCatalog(); loadAll(); loadCatalog(); loadMetaAccount();
 })();
 })();
 </script>
