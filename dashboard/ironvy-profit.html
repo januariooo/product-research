@@ -1,0 +1,992 @@
+<title>Ironvy Profit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: fixed icon sidebar + top filter bar + scrolling content views (sidebar becomes a bottom tab bar on phones) */
+:root{
+  --bg:#0b0d0c; --panel:#121514; --panel2:#171b19; --line:#232826; --ink:#e9eeeb; --muted:#8b948f; --dim:#5f6762;
+  --accent:#2bd47d; --accent-ink:#04140b; --accent-soft:rgba(43,212,125,.12);
+  --good:#2bd47d; --mid:#e8b33d; --bad:#ff5d5d;
+  --s-net:#a77bff; --s-ad:#4f8dff; --s-cogs:#c98a3d; --s-ret:#ff5d5d; --s-profit:#2bd47d;
+  --f-ui:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#f2f4f3; --panel:#ffffff; --panel2:#f7f9f8; --line:#e1e6e3; --ink:#111614; --muted:#5d6762; --dim:#8a938e;
+  --accent:#0f9f57; --accent-ink:#ffffff; --accent-soft:rgba(15,159,87,.1);
+  --good:#0f9f57; --mid:#a8740c; --bad:#d23434;
+  --s-net:#7b4fe0; --s-ad:#2e6be6; --s-cogs:#a8691f; --s-ret:#d23434; --s-profit:#0f9f57; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f2f4f3; --panel:#ffffff; --panel2:#f7f9f8; --line:#e1e6e3; --ink:#111614; --muted:#5d6762; --dim:#8a938e;
+  --accent:#0f9f57; --accent-ink:#ffffff; --accent-soft:rgba(15,159,87,.1);
+  --good:#0f9f57; --mid:#a8740c; --bad:#d23434;
+  --s-net:#7b4fe0; --s-ad:#2e6be6; --s-cogs:#a8691f; --s-ret:#d23434; --s-profit:#0f9f57; color-scheme:light}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:13.5px;line-height:1.45}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:64px minmax(0,1fr);min-height:100%}
+nav.side{position:sticky;top:env(safe-area-inset-top,0px);height:100vh;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:14px;background:var(--bg)}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:17px;margin-bottom:14px}
+.side a{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;color:var(--muted);text-decoration:none;position:relative}
+.side a svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.side a:hover{color:var(--ink);background:var(--panel)}
+.side a[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.side a span{position:absolute;left:52px;white-space:nowrap;background:var(--panel2);border:1px solid var(--line);padding:4px 8px;border-radius:6px;font-size:12px;color:var(--ink);opacity:0;pointer-events:none;transition:opacity .15s}
+.side a:hover span{opacity:1}
+.side .sep{flex:1}
+main{min-width:0;padding-inline:20px;padding-block:0 60px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.chipsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;font-size:12.5px;font-weight:600}
+.chipsel select{background:transparent;border:0;font-weight:600;font-size:12.5px;padding:0}
+.chipsel select option{background:var(--panel);color:var(--ink)}
+.chipsel input[type=date]{background:transparent;border:0;font-size:12.5px;font-weight:600;width:120px}
+.top .grow{flex:1}
+.status{font:12px var(--f-num);color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dim);margin-right:5px;vertical-align:1px}
+.dot.ok{background:var(--good)} .dot.warn{background:var(--mid)} .dot.err{background:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;font-weight:600;font-size:12.5px}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:none}
+.btn:disabled{opacity:.5;cursor:default}
+.view{display:grid;gap:16px}
+.view[hidden]{display:none!important}
+h1{font-size:20px;font-weight:800;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:12.5px;margin:2px 0 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card h2{font-size:14.5px;font-weight:700;margin:0}
+.cardhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:4px;min-width:0}
+.tile .l{font-size:12px;color:var(--muted);font-weight:600}
+.tile .v{font:600 22px var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.tile .c{font:500 11.5px var(--f-num);color:var(--muted)}
+.up{color:var(--good)!important} .down{color:var(--bad)!important}
+.tile.profit .v{color:var(--good)} .tile.profit.neg .v{color:var(--bad)}
+.tile .hint{font-size:11px;color:var(--dim)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.row2{grid-template-columns:minmax(0,1fr)}}
+.goal{display:grid;gap:8px}
+.goal .big{font:600 24px var(--f-num)}
+.goal .big small{font:500 12px var(--f-ui);color:var(--muted)}
+.meter{height:8px;background:var(--panel2);border:1px solid var(--line);border-radius:99px;overflow:hidden;position:relative}
+.meter i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:99px}
+.meter b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.badge.good{background:rgba(43,212,125,.14);color:var(--good)} .badge.mid{background:rgba(232,179,61,.14);color:var(--mid)} .badge.bad{background:rgba(255,93,93,.14);color:var(--bad)} .badge.na{color:var(--dim);background:var(--panel2)}
+.tscroll{overflow-x:auto;margin-inline:-16px;padding-inline:16px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel2)}
+th.sort{cursor:pointer;user-select:none}
+th.sort:hover{color:var(--ink)}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;font-family:var(--f-num);white-space:nowrap}
+.pname{display:flex;gap:10px;align-items:center;min-width:180px}
+.pname img,.pname .ph{width:34px;height:34px;border-radius:7px;object-fit:cover;background:var(--panel2);border:1px solid var(--line);flex:none}
+.pname b{display:block;font-weight:600}
+.pname small{color:var(--dim);font:11px var(--f-num)}
+.pin{background:none;border:0;color:var(--dim);padding:4px;font-size:14px;line-height:1}
+.pin[aria-pressed="true"]{color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted)}
+.legend label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.legend i{width:9px;height:9px;border-radius:50%}
+.legend input{accent-color:var(--accent);margin:0}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{fill:var(--dim);font:10.5px var(--f-num)}
+.tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:11.5px var(--f-num);display:grid;gap:3px;min-width:170px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.tip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.search{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--panel2);min-width:220px}
+.search input{background:none;border:0;outline:0;width:100%;font-size:12.5px}
+.empty{color:var(--muted);font-size:13px;padding:18px 4px;text-align:center}
+.note{color:var(--muted);font-size:12.5px;margin:0}
+.warnbox{border:1px solid rgba(232,179,61,.4);background:rgba(232,179,61,.08);border-radius:10px;padding:10px 12px;font-size:12.5px;display:flex;gap:8px;align-items:flex-start}
+.errbox{border:1px solid rgba(255,93,93,.4);background:rgba(255,93,93,.08);border-radius:10px;padding:10px 12px;font-size:12.5px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.form{grid-template-columns:minmax(0,1fr)}}
+.field{display:grid;gap:5px}
+.field.full{grid-column:1/-1}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input,.field select,.field textarea{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.field small{color:var(--dim);font-size:11px}
+.check{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:12.5px}
+.inl{display:flex;gap:8px;align-items:center}
+.inl input{width:110px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right;font-family:var(--f-num)}
+.map{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.map{grid-template-columns:minmax(0,1fr)}}
+.list{display:grid;gap:6px;max-height:560px;overflow:auto}
+.item{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2)}
+.item.sel{border-color:var(--accent);background:var(--accent-soft)}
+.item .grow{min-width:0;flex:1}
+.item b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{color:var(--muted);font-size:11.5px}
+.tabs{display:inline-flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.tabs button{background:none;border:0;padding:6px 10px;color:var(--muted);font-weight:600;border-bottom:2px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:12.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-family:var(--f-num)}
+.ask textarea{width:100%;min-height:60px;resize:vertical;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px}
+.answer{white-space:pre-wrap;line-height:1.55;border-left:3px solid var(--accent);padding:2px 0 2px 12px;margin-top:10px}
+.answer:empty{display:none}
+.trace{font:11.5px var(--f-num);color:var(--muted);margin-top:6px}
+.toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:20}
+.skel{color:var(--dim)}
+@media (max-width:720px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  nav.side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;justify-content:space-around;border-right:0;border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:10}
+  .logo,.side .sep{display:none}
+  .side a span{display:none}
+  main{padding-inline:16px;padding-block:0 90px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <nav class="side" aria-label="Navigatie">
+    <div class="logo" aria-hidden="true">I</div>
+    <a href="#dashboard" data-view="dashboard"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Dashboard</span></a>
+    <a href="#products" data-view="products"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg><span>Producten & inkoop</span></a>
+    <a href="#ads" data-view="ads"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg><span>Ads koppelen</span></a>
+    <a href="#expenses" data-view="expenses"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg><span>Kosten</span></a>
+    <a href="#ask" data-view="ask"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Vraag Claude</span></a>
+    <div class="sep"></div>
+    <a href="#settings" data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Instellingen</span></a>
+  </nav>
+
+  <main>
+    <div class="top">
+      <label class="chipsel">Periode
+        <select id="preset" aria-label="Periode">
+          <option value="today">Vandaag</option>
+          <option value="7">Laatste 7 dagen</option>
+          <option value="30" selected>Laatste 30 dagen</option>
+          <option value="month">Deze maand</option>
+          <option value="lastmonth">Vorige maand</option>
+          <option value="90">Laatste 90 dagen</option>
+          <option value="custom">Aangepast…</option>
+        </select>
+      </label>
+      <span class="chipsel" id="customRange" hidden><input type="date" id="dFrom" aria-label="Van"> – <input type="date" id="dTo" aria-label="Tot"></span>
+      <label class="chipsel">Product
+        <select id="prodFilter" aria-label="Product"><option value="">Alle producten</option></select>
+      </label>
+      <span class="chipsel" id="ccy">Valuta: GBP</span>
+      <div class="grow"></div>
+      <div class="status" id="status"><span><i class="dot" id="dShop"></i>Shopify</span><span><i class="dot" id="dMeta"></i>Meta</span><span id="stamp"></span></div>
+      <button class="btn" id="reload" type="button">Vernieuwen</button>
+    </div>
+
+    <div id="pageErr" class="errbox" hidden></div>
+
+    <!-- DASHBOARD -->
+    <section class="view" id="v-dashboard">
+      <div id="setupWarn" class="warnbox" hidden></div>
+      <div class="tiles">
+        <div class="tile"><span class="l">Totale omzet</span><span class="v" id="t-sales">–</span><span class="c" id="c-sales">&nbsp;</span></div>
+        <div class="tile"><span class="l">Advertentie-uitgaven</span><span class="v" id="t-ad">–</span><span class="c" id="c-ad">&nbsp;</span></div>
+        <div class="tile"><span class="l">Inkoopkosten (COGS)</span><span class="v" id="t-cogs">–</span><span class="c" id="c-cogs">&nbsp;</span></div>
+        <div class="tile"><span class="l">Retouren</span><span class="v" id="t-ret">–</span><span class="c" id="c-ret">&nbsp;</span></div>
+        <div class="tile profit" id="tileProfit"><span class="l">Nettowinst</span><span class="v" id="t-profit">–</span><span class="c" id="c-profit">&nbsp;</span></div>
+      </div>
+      <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div class="tile"><span class="l">Netto omzet</span><span class="v" id="t-net">–</span></div>
+        <div class="tile"><span class="l">Bestellingen</span><span class="v" id="t-orders">–</span></div>
+        <div class="tile"><span class="l">ROAS</span><span class="v" id="t-roas">–</span><span class="c" id="b-roas"></span></div>
+        <div class="tile"><span class="l">Winstmarge</span><span class="v" id="t-margin">–</span><span class="c" id="b-margin"></span></div>
+        <div class="tile"><span class="l">Kosten & fees</span><span class="v" id="t-fees">–</span><span class="hint">transactiekosten + vaste lasten</span></div>
+        <div class="tile"><span class="l">Break-even ROAS</span><span class="v" id="t-be">–</span><span class="hint">onder deze ROAS lever je in</span></div>
+      </div>
+
+      <div class="row2">
+        <div class="card">
+          <div class="cardhead"><div><h2>Doelen</h2><p class="sub">Haal je je maanddoel in dit tempo?</p></div><button class="btn ghost" type="button" data-go="settings">Doel aanpassen</button></div>
+          <div class="goal" id="goal"><p class="note skel">Laden…</p></div>
+        </div>
+        <div class="card">
+          <div class="cardhead"><div><h2>Waar gaat je geld heen</h2><p class="sub">Van omzet naar nettowinst</p></div></div>
+          <div id="waterfall"><p class="note skel">Laden…</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><div><h2>Watchlist</h2><p class="sub">Producten die je dagelijks test. Pin ze in de producttabel.</p></div></div>
+        <div class="tscroll" id="watch"><p class="note skel">Laden…</p></div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><div><h2>Prestaties door de tijd</h2><p class="sub" id="trendSub">per dag</p></div>
+          <div class="legend" id="legend"></div></div>
+        <div class="chart" id="trend"><p class="note skel">Laden…</p></div>
+      </div>
+
+      <div class="card">
+        <div class="cardhead"><div><h2>Productprestaties</h2><p class="sub">Klik op een kolom om te sorteren</p></div>
+          <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="pSearch" placeholder="Zoek op naam of SKU" aria-label="Zoek product"></label></div>
+        <div class="tscroll" id="ptable"><p class="note skel">Laden…</p></div>
+      </div>
+    </section>
+
+    <!-- PRODUCTS / COGS -->
+    <section class="view" id="v-products" hidden>
+      <div><h1>Producten & inkoop</h1><p class="sub">Vul per product je inkoopprijs en verzendkosten per stuk in. Zonder inkoopprijs kan de nettowinst niet kloppen.</p></div>
+      <div class="card">
+        <div class="cardhead"><div><h2>Inkoopkosten per product</h2><p class="sub" id="cogsSub">Wordt direct opgeslagen voor iedereen met toegang</p></div><button class="btn" type="button" id="cogsReload">Producten verversen</button></div>
+        <div class="tscroll" id="cogsTable"><p class="note skel">Producten laden…</p></div>
+      </div>
+      <div class="card">
+        <h2>Onbekende producten</h2>
+        <p class="note" style="margin-top:6px">Verkopen zonder product in Shopify (handmatige of verwijderde producten) krijgen dit inkooppercentage.</p>
+        <div class="inl" style="margin-top:10px"><input id="fallbackPct" type="number" min="0" max="100" step="0.1" aria-label="Inkooppercentage voor onbekende producten"><span>% van netto omzet</span><button class="btn" type="button" id="saveFallback">Opslaan</button></div>
+      </div>
+    </section>
+
+    <!-- ADS MAPPING -->
+    <section class="view" id="v-ads" hidden>
+      <div><h1>Ads koppelen</h1><p class="sub">Koppel advertenties of hele campagnes aan een product. Zo zie je per product wat het aan ads kost en wat het oplevert.</p></div>
+      <div id="adsWarn" class="warnbox" hidden></div>
+      <div class="map">
+        <div class="card">
+          <div class="cardhead"><div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-lvl="ad">Advertenties</button><button role="tab" aria-selected="false" data-lvl="campaign">Campagnes</button></div>
+            <label class="search" style="min-width:0"><input id="adSearch" placeholder="Zoek op naam of campagne" aria-label="Zoek advertentie"></label></div>
+          <div class="list" id="adList"><p class="note skel">Meta-data laden…</p></div>
+        </div>
+        <div class="card">
+          <div class="cardhead"><h2>Producten</h2><button class="btn pri" type="button" id="assignBtn" disabled>Koppel aan product</button></div>
+          <div class="list" id="mapProducts"><p class="note skel">Laden…</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section class="view" id="v-expenses" hidden>
+      <div class="cardhead" style="margin:0"><div><h1>Kosten</h1><p class="sub">Vaste lasten, apps, bureau-fees en andere kosten die van je winst af gaan.</p></div><button class="btn pri" type="button" id="addExpBtn">+ Kosten toevoegen</button></div>
+      <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+        <div class="tile"><span class="l">Maandelijks terugkerend</span><span class="v" id="e-month">–</span></div>
+        <div class="tile"><span class="l">Jaarprognose</span><span class="v" id="e-year">–</span></div>
+        <div class="tile"><span class="l">Eenmalig in periode</span><span class="v" id="e-once">–</span></div>
+        <div class="tile"><span class="l">Actieve kostenposten</span><span class="v" id="e-count">–</span></div>
+      </div>
+      <div class="card" id="expForm" hidden>
+        <div class="cardhead"><h2 id="expFormTitle">Nieuwe kostenpost</h2><button class="btn ghost" type="button" id="expCancel">Annuleren</button></div>
+        <form id="expF" class="form">
+          <div class="field"><label for="exName">Naam</label><input id="exName" required placeholder="Bijv. Klaviyo"></div>
+          <div class="field"><label for="exCat">Categorie</label><select id="exCat"><option>Software & tools</option><option>Bureau / freelancer</option><option>Agency top-up fees</option><option>Verzending & fulfilment</option><option>Content & creatives</option><option>Overig</option></select></div>
+          <div class="field"><label for="exAmt">Bedrag (GBP)</label><input id="exAmt" type="number" min="0" step="0.01" required></div>
+          <div class="field"><label for="exStart">Startdatum</label><input id="exStart" type="date" required></div>
+          <div class="field full"><label class="check"><input type="checkbox" id="exRec"> Dit is een terugkerende kostenpost</label></div>
+          <div class="field"><label for="exFreq">Frequentie</label><select id="exFreq" disabled><option value="monthly">Maandelijks</option><option value="weekly">Wekelijks</option><option value="yearly">Jaarlijks</option></select></div>
+          <div class="field"><label for="exStatus">Status</label><select id="exStatus"><option value="active">Actief</option><option value="paused">Gepauzeerd</option></select></div>
+          <div class="field full"><label for="exNotes">Notities (optioneel)</label><textarea id="exNotes" rows="2"></textarea></div>
+          <div class="field full" style="display:flex;gap:8px;justify-content:flex-end"><button class="btn pri" type="submit">Opslaan</button></div>
+        </form>
+      </div>
+      <div class="card">
+        <div class="cardhead"><h2>Alle kosten</h2><label class="chipsel">Categorie <select id="exFilter"><option value="">Alle</option></select></label></div>
+        <div class="tscroll" id="expTable"><p class="note skel">Laden…</p></div>
+      </div>
+      <div class="card">
+        <h2>Transactiekosten</h2>
+        <p class="note" style="margin:6px 0 12px">Wordt per bestelling berekend: een percentage van de omzet plus een vast bedrag. Shopify Payments UK Basic is ongeveer 2% + £0,25 (controleer je eigen tarief).</p>
+        <div class="form">
+          <div class="field"><label for="feePct">Percentage van omzet</label><input id="feePct" type="number" min="0" step="0.01"></div>
+          <div class="field"><label for="feeFix">Vast bedrag per bestelling (GBP)</label><input id="feeFix" type="number" min="0" step="0.01"></div>
+          <div class="field full" style="display:flex;justify-content:flex-end"><button class="btn" type="button" id="saveFees">Opslaan</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ASK -->
+    <section class="view ask" id="v-ask" hidden>
+      <div><h1>Vraag Claude</h1><p class="sub">Claude haalt zelf je Shopify- en Meta-cijfers op en rekent met jouw inkoop- en kostendata.</p></div>
+      <div class="card">
+        <textarea id="q" placeholder="Bijvoorbeeld: welke advertenties kosten me geld zonder winst op te leveren?" aria-label="Vraag"></textarea>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+          <button class="btn pri" type="button" id="askBtn">Analyseren</button>
+          <button class="btn" type="button" id="stopBtn" hidden>Stoppen</button>
+          <button class="btn ghost" type="button" data-q="Geef een kort winstrapport van deze periode: wat gaat goed, wat kost geld, en de 3 belangrijkste acties.">Winstrapport</button>
+          <button class="btn ghost" type="button" data-q="Welke campagnes en advertenties moet ik opschalen en welke moet ik stoppen, op basis van winst en niet alleen ROAS?">Opschalen of stoppen</button>
+          <button class="btn ghost" type="button" data-q="Wat is mijn break-even ROAS en hoeveel mag ik maximaal per aankoop aan ads uitgeven?">Break-even</button>
+        </div>
+        <div class="trace" id="trace"></div>
+        <div class="answer" id="answer"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="v-settings" hidden>
+      <div><h1>Instellingen</h1><p class="sub">Geldt voor iedereen die deze app gebruikt.</p></div>
+      <div class="row2">
+        <div class="card">
+          <h2>Koppelingen</h2>
+          <dl class="kv" style="margin-top:12px" id="conn"></dl>
+          <p class="note" style="margin-top:12px">Shopify en Meta (via Windsor.ai) worden live uitgelezen met de koppelingen van degene die de app opent. Een extra Meta-account voeg je toe in Windsor.ai.</p>
+        </div>
+        <div class="card">
+          <h2>Valuta</h2>
+          <div class="form" style="margin-top:12px">
+            <div class="field full"><label for="fx">Wisselkoers Meta-valuta → GBP</label><input id="fx" type="number" min="0" step="0.0001"><small id="fxHint">1 eenheid advertentievaluta = zoveel GBP</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Maanddoel</h2>
+        <div class="form" style="margin-top:12px">
+          <div class="field"><label for="goalRev">Omzetdoel per maand (GBP)</label><input id="goalRev" type="number" min="0" step="1"></div>
+          <div class="field"><label for="goalProfit">Winstdoel per maand (GBP, optioneel)</label><input id="goalProfit" type="number" min="0" step="1"></div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="card">
+          <h2>ROAS-drempels</h2>
+          <div class="form" style="margin-top:12px">
+            <div class="field"><label for="roasHi">Goed vanaf</label><input id="roasHi" type="number" step="0.1" min="0"></div>
+            <div class="field"><label for="roasLo">Slecht onder</label><input id="roasLo" type="number" step="0.1" min="0"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Winstdrempels (% van netto omzet)</h2>
+          <div class="form" style="margin-top:12px">
+            <div class="field"><label for="profHi">Goed vanaf</label><input id="profHi" type="number" step="1"></div>
+            <div class="field"><label for="profLo">Slecht onder</label><input id="profLo" type="number" step="1"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn pri" type="button" id="saveSettings">Instellingen opslaan</button></div>
+      <div class="card">
+        <h2>Team</h2>
+        <p class="note" style="margin-top:6px">Nodig teamleden uit via het menu <b>Delen</b> van deze pagina. Geef ze minimaal de rol Bijdrager, dan kunnen ze kosten en inkoopprijzen aanpassen. Iedereen ziet de Shopify- en Meta-cijfers via de eigen koppelingen in Claude.</p>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const SHOP = "Shopify", SQL = "run-analytics-query", PRODUCTS = "search_products";
+const WIN = "Windsor.ai", WDATA = "get_data", WCONN = "get_connectors";
+const AD_FIELDS = ["date","account_currency","campaign_id","campaign","ad_id","ad_name","adset_name","spend","impressions","clicks","actions_purchase","action_values_purchase"];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const n = v => { const x = parseFloat(v); return isFinite(x) ? x : 0; };
+const money = new Intl.NumberFormat("nl-NL",{style:"currency",currency:"GBP"});
+const money0 = new Intl.NumberFormat("nl-NL",{style:"currency",currency:"GBP",maximumFractionDigits:0});
+const int = new Intl.NumberFormat("nl-NL");
+const fm = v => money.format(v || 0);
+const pctf = v => (v*100).toLocaleString("nl-NL",{maximumFractionDigits:1}) + "%";
+const dstr = d => d.toISOString().slice(0,10);
+const addDays = (s, k) => { const d = new Date(s+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+k); return dstr(d); };
+const daysBetween = (a, b) => Math.round((new Date(b+"T00:00:00Z") - new Date(a+"T00:00:00Z"))/864e5) + 1;
+const today = () => dstr(new Date());
+
+/* ---------- state ---------- */
+const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0};
+const st = {
+  settings:{...DEFAULTS}, cogs:{}, expenses:[], mappings:{}, watch:{},
+  range:{from:null,to:null,prevFrom:null,prevTo:null},
+  shopDaily:[], shopProducts:[], monthSales:null, catalog:[], ads:[], adCurrency:null, metaAccount:null,
+  shopOk:false, metaState:"loading", sort:{key:"net",dir:-1}, series:{net:true,ad:true,cogs:true,ret:true,profit:true},
+  adLevel:"ad", selAds:new Set(), selProduct:null, editExp:null
+};
+let mcp = null, db = null, canWrite = true;
+
+/* ---------- range ---------- */
+function computeRange(){
+  const p = $("preset").value, t = today();
+  let from, to = t;
+  if (p === "today") from = t;
+  else if (p === "month") from = t.slice(0,8)+"01";
+  else if (p === "lastmonth"){ const d = new Date(t.slice(0,8)+"01T00:00:00Z"); d.setUTCDate(0); to = dstr(d); from = to.slice(0,8)+"01"; }
+  else if (p === "custom"){ from = $("dFrom").value || addDays(t,-29); to = $("dTo").value || t; if (from > to) [from,to] = [to,from]; }
+  else from = addDays(t, -(+p - 1));
+  const len = daysBetween(from, to);
+  st.range = {from, to, prevTo:addDays(from,-1), prevFrom:addDays(from,-len), len};
+}
+
+/* ---------- MCP helpers ---------- */
+const ERR = {
+  needs_reauth:"moet opnieuw gekoppeld worden (claude.ai → Instellingen → Connectors)",
+  server_not_connected:"is niet gekoppeld voor jouw account (claude.ai → Instellingen → Connectors)",
+  selection_required:"kies welke koppeling deze pagina moet gebruiken",
+  not_in_manifest:"heeft geen toestemming voor deze pagina (menu Machtigingen van de pagina)",
+  approval_required:"wacht op je goedkeuring",
+  blocked_by_policy:"is geblokkeerd door je organisatie",
+  server_unavailable:"reageert nu niet, probeer het zo opnieuw",
+  tool_error:"gaf een fout terug",
+};
+const errMsg = (who, e) => `${who} ${ERR[e?.code] || "kon niet geladen worden"}${e?.code==="tool_error" && e.message ? ": "+e.message : ""}.`;
+async function sql(query){
+  const r = await mcp.callTool(SHOP, SQL, {query}, {cache:{staleTime:120000, gcTime:3600000}});
+  const p = r.payload || {}; const cols = (p.columns||[]).map(c => c.name);
+  return (p.rows||[]).map(row => Object.fromEntries(cols.map((c,i)=>[c,row[i]])));
+}
+function findRows(p){
+  if (Array.isArray(p)) return p;
+  if (!p || typeof p !== "object") return null;
+  for (const k of ["data","rows","result","records","results"]) { const r = findRows(p[k]); if (r) return r; }
+  return null;
+}
+async function windsor(input, onWait){
+  let soft = 0;
+  for (let i = 0; i < 40; i++){
+    let r;
+    try { r = await mcp.callTool(WIN, WDATA, input, {cache:false}); }
+    catch(e){
+      /* get_data is a read; a slow pull can time out the call itself, so keep polling a few times */
+      if ((e?.code === "server_unavailable" || e?.code === "upstream_error") && ++soft <= 6){ onWait?.({running_seconds:0}); await new Promise(res => setTimeout(res, 15000)); continue; }
+      throw e;
+    }
+    const p = r.payload;
+    if (p && typeof p === "object" && p.status === "pending"){
+      onWait?.(p);
+      await new Promise(res => setTimeout(res, Math.min(Math.max(+p.poll_after_seconds||10, 5), 30)*1000));
+      continue;
+    }
+    if (p && typeof p === "object" && (p.error || p.status === "error" || p.status === "failed")) throw {code:"tool_error", message:String(p.error?.message || p.error || p.message || "pull mislukt")};
+    return findRows(p) || [];
+  }
+  throw {code:"server_unavailable"};
+}
+
+/* ---------- loading ---------- */
+let loadSeq = 0;
+async function loadAll(){
+  computeRange();
+  const seq = ++loadSeq, R = st.range;
+  $("stamp").textContent = "Laden…";
+  const monthStart = today().slice(0,8)+"01";
+  const shopP = Promise.all([
+    sql(`FROM sales SHOW total_sales, net_sales, gross_sales, returns, orders TIMESERIES day SINCE ${R.prevFrom} UNTIL ${R.to}`),
+    sql(`FROM sales SHOW net_items_sold, gross_sales, net_sales, returns, total_sales, orders GROUP BY product_id, product_title, product_variant_sku SINCE ${R.from} UNTIL ${R.to} ORDER BY net_sales DESC LIMIT 250`),
+    sql(`FROM sales SHOW total_sales, net_sales, orders TIMESERIES day SINCE ${monthStart} UNTIL ${today()}`),
+  ]).then(([daily, prods, month]) => {
+    if (seq !== loadSeq) return;
+    st.shopDaily = daily; st.shopProducts = prods; st.monthSales = month; st.shopOk = true;
+    $("dShop").className = "dot ok"; renderAll();
+  }).catch(e => { if (seq !== loadSeq) return; st.shopOk = false; $("dShop").className = "dot err"; showPageErr(errMsg("Shopify", e)); });
+
+  st.metaState = "loading"; $("dMeta").className = "dot warn"; renderMetaWarn();
+  const adP = windsor({connector:"facebook", fields:AD_FIELDS, date_from:R.prevFrom, date_to:R.to}, p => {
+      if (seq === loadSeq){ $("dMeta").className = "dot warn"; $("dMeta").parentElement.title = `Meta-data wordt klaargezet (${Math.round(p.running_seconds||0)}s)`; }
+    }).then(rows => {
+      if (seq !== loadSeq) return;
+      st.ads = rows.map(r => ({date:String(r.date||"").slice(0,10), cid:String(r.campaign_id||r.campaign||""), campaign:r.campaign||"(geen campagne)", aid:String(r.ad_id||r.ad_name||""), ad:r.ad_name||"(naamloze ad)", adset:r.adset_name||"", spend:n(r.spend), imp:n(r.impressions), clicks:n(r.clicks), purch:n(r.actions_purchase), value:n(r.action_values_purchase), ccy:r.account_currency}));
+      st.adCurrency = st.ads.find(a => a.ccy)?.ccy || st.adCurrency;
+      st.metaState = "ok"; $("dMeta").className = "dot ok"; $("dMeta").parentElement.title = "";
+      renderAll();
+    }).catch(e => { if (seq !== loadSeq) return; st.metaState = "err:" + errMsg("Meta (Windsor.ai)", e); $("dMeta").className = "dot err"; renderAll(); });
+
+  await Promise.allSettled([shopP, adP]);
+  if (seq === loadSeq) $("stamp").textContent = "Bijgewerkt " + new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+}
+async function loadCatalog(){
+  if (!mcp) return;
+  try {
+    const all = []; let after;
+    for (let i = 0; i < 6; i++){
+      const r = await mcp.callTool(SHOP, PRODUCTS, after ? {first:50, after} : {first:50}, {cache:{staleTime:300000, gcTime:3600000}});
+      const p = r.payload?.data?.products || r.payload?.products || {};
+      (p.edges||[]).forEach(({node}) => all.push({id:String(node.id).split("/").pop(), title:node.title, status:node.status, img:node.featuredMedia?.preview?.image?.url || "", price:n(node.priceRangeV2?.minVariantPrice?.amount), sku:node.variants?.edges?.[0]?.node?.sku || ""}));
+      if (!p.pageInfo?.hasNextPage) break; after = p.pageInfo.endCursor;
+    }
+    st.catalog = all;
+    const sel = $("prodFilter"), cur = sel.value;
+    sel.innerHTML = `<option value="">Alle producten</option>` + all.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("");
+    sel.value = cur;
+    renderCogs(); renderMapProducts(); renderAll();
+  } catch(e){ $("cogsTable").innerHTML = `<div class="errbox">${esc(errMsg("Shopify", e))}</div>`; }
+}
+async function loadMetaAccount(){
+  try {
+    const r = await mcp.callTool(WIN, WCONN, {include_actions:false, include_options:false}, {cache:{staleTime:300000, gcTime:3600000}});
+    const list = findRows(r.payload) || [];
+    const fb = list.find(c => c.id === "facebook");
+    st.metaAccount = fb ? (fb.accounts||[]).map(a => a.name || a.id).join(", ") : null;
+  } catch { st.metaAccount = null; }
+  renderConn();
+}
+
+/* ---------- calculations ---------- */
+const inRange = (d, a, b) => d >= a && d <= b;
+function expensesFor(from, to){
+  let total = 0;
+  for (const e of st.expenses){
+    if (e.status !== "active") continue;
+    const amt = n(e.amount);
+    if (!e.recurring){ if (inRange(e.startDate, from, to)) total += amt; continue; }
+    const a = e.startDate > from ? e.startDate : from; if (a > to) continue;
+    const days = daysBetween(a, to);
+    const perDay = e.frequency === "weekly" ? amt/7 : e.frequency === "yearly" ? amt/365 : amt*12/365;
+    total += perDay * days;
+  }
+  return total;
+}
+function productCostRate(){
+  /* COGS per unit by product id; fallback % for unknown */
+  return id => { const c = st.cogs[id]; return c ? n(c.unitCost) + n(c.shipping) : null; };
+}
+function adSpendFor(from, to, productId){
+  const fx = n(st.settings.fx) || 1;
+  let s = 0, v = 0, p = 0;
+  for (const a of st.ads){
+    if (!inRange(a.date, from, to)) continue;
+    if (productId){
+      const m = st.mappings["ad_"+a.aid] || st.mappings["cmp_"+a.cid];
+      if (!m || m.productId !== productId) continue;
+    }
+    s += a.spend; v += a.value; p += a.purch;
+  }
+  return {spend:s*fx, value:v*fx, purch:p};
+}
+function shopTotals(from, to){
+  const t = {total:0, net:0, gross:0, ret:0, orders:0};
+  for (const r of st.shopDaily){ if (!inRange(r.day, from, to)) continue; t.total += n(r.total_sales); t.net += n(r.net_sales); t.gross += n(r.gross_sales); t.ret += Math.abs(n(r.returns)); t.orders += n(r.orders); }
+  return t;
+}
+function cogsRatio(){
+  /* share of net sales that is COGS, from the current-period product rows */
+  const rate = productCostRate(); let cogs = 0, net = 0, missing = 0;
+  for (const r of st.shopProducts){
+    const id = String(r.product_id||""), units = n(r.net_items_sold), ns = n(r.net_sales);
+    net += ns;
+    const c = id ? rate(id) : null;
+    if (c != null) cogs += units * c;
+    else { cogs += ns * n(st.settings.fallbackPct)/100; if (ns > 0 && (id || !n(st.settings.fallbackPct))) missing++; }
+  }
+  return {ratio: net ? cogs/net : 0, cogs, missing};
+}
+function periodCalc(from, to, ratio){
+  const s = shopTotals(from, to), ad = adSpendFor(from, to);
+  const cogs = s.net * ratio;
+  const fees = s.total * n(st.settings.feePct)/100 + s.orders * n(st.settings.feeFix);
+  const exp = expensesFor(from, to);
+  const profit = s.net - cogs - ad.spend - fees - exp;
+  return {...s, ad:ad.spend, adValue:ad.value, cogs, fees, exp, profit};
+}
+function productRows(){
+  const rate = productCostRate(), R = st.range;
+  const byId = new Map();
+  for (const r of st.shopProducts){
+    const id = String(r.product_id||"") || "__unknown";
+    const o = byId.get(id) || {id, title: r.product_title || "Onbekend product", sku:"", units:0, total:0, net:0, ret:0, orders:0};
+    o.units += n(r.net_items_sold); o.total += n(r.total_sales); o.net += n(r.net_sales); o.ret += Math.abs(n(r.returns)); o.orders += n(r.orders);
+    if (!o.sku && r.product_variant_sku) o.sku = r.product_variant_sku;
+    byId.set(id, o);
+  }
+  for (const p of st.catalog) if (!byId.has(p.id) && (st.watch[p.id] || adSpendFor(R.from,R.to,p.id).spend > 0)) byId.set(p.id, {id:p.id, title:p.title, sku:p.sku, units:0,total:0,net:0,ret:0,orders:0});
+  const shopTot = shopTotals(R.from, R.to);
+  return [...byId.values()].map(o => {
+    const cat = st.catalog.find(p => p.id === o.id);
+    if (cat){ o.title = cat.title; o.img = cat.img; o.sku = o.sku || cat.sku; }
+    const c = o.id !== "__unknown" ? rate(o.id) : null;
+    o.cogs = c != null ? o.units * c : o.net * n(st.settings.fallbackPct)/100;
+    o.cogsMissing = c == null;
+    o.ad = o.id !== "__unknown" ? adSpendFor(R.from, R.to, o.id).spend : 0;
+    o.fees = shopTot.total ? (o.total/shopTot.total) * (shopTot.total*n(st.settings.feePct)/100 + shopTot.orders*n(st.settings.feeFix)) : 0;
+    o.profit = o.net - o.cogs - o.ad - o.fees;
+    o.roas = o.ad > 0 ? o.total / o.ad : null;
+    return o;
+  });
+}
+function roasBadge(r){
+  if (r == null) return `<span class="badge na">N.v.t.</span>`;
+  const s = st.settings; const v = r.toLocaleString("nl-NL",{maximumFractionDigits:2});
+  if (r >= n(s.roasHi)) return `${v} <span class="badge good">Hoge ROAS</span>`;
+  if (r <= n(s.roasLo)) return `${v} <span class="badge bad">Lage ROAS</span>`;
+  return `${v} <span class="badge mid">Gemiddeld</span>`;
+}
+function profitClass(profit, net){
+  if (!net) return profit < 0 ? "bad" : "na";
+  const m = profit/net*100, s = st.settings;
+  return m >= n(s.profHi) ? "good" : m <= n(s.profLo) ? "bad" : "mid";
+}
+
+/* ---------- rendering ---------- */
+function chg(el, cur, prev, invert){
+  if (!prev && !cur){ el.textContent = "geen data in beide periodes"; el.className = "c"; return; }
+  if (!prev){ el.textContent = "nieuw t.o.v. vorige periode"; el.className = "c"; return; }
+  const d = (cur - prev)/Math.abs(prev)*100;
+  const good = invert ? d < 0 : d > 0;
+  el.textContent = `${d>=0?"↑":"↓"} ${Math.abs(d).toLocaleString("nl-NL",{maximumFractionDigits:0})}% t.o.v. vorige ${st.range.len} dagen`;
+  el.className = "c " + (d === 0 ? "" : good ? "up" : "down");
+}
+function renderAll(){
+  renderDashboard(); renderAdsList(); renderExpenses(); renderMetaWarn();
+}
+function renderMetaWarn(){
+  const w = $("adsWarn");
+  if (st.metaState === "loading"){ w.hidden = false; w.textContent = "Meta-advertentiedata wordt via Windsor.ai opgehaald. Bij een nieuwe koppeling kan dit een paar minuten duren."; }
+  else if (st.metaState.startsWith("err:")){ w.hidden = false; w.textContent = st.metaState.slice(4); }
+  else if (!st.ads.length){ w.hidden = false; w.textContent = "Geen advertentie-uitgaven gevonden in deze periode."; }
+  else w.hidden = true;
+}
+function renderDashboard(){
+  if (!st.shopOk) return;
+  const R = st.range, pf = $("prodFilter").value;
+  const cr = cogsRatio();
+  let cur, prev;
+  if (pf){
+    const row = productRows().find(p => p.id === pf) || {total:0,net:0,ret:0,orders:0,cogs:0,ad:0,fees:0,profit:0};
+    cur = {total:row.total, net:row.net, ret:row.ret, orders:row.orders, cogs:row.cogs, ad:row.ad, fees:row.fees, exp:0, profit:row.profit, adValue:0};
+    prev = null;
+  } else {
+    cur = periodCalc(R.from, R.to, cr.ratio);
+    prev = periodCalc(R.prevFrom, R.prevTo, cr.ratio);
+  }
+  $("t-sales").textContent = fm(cur.total); $("t-ad").textContent = fm(cur.ad); $("t-cogs").textContent = fm(cur.cogs);
+  $("t-ret").textContent = fm(cur.ret); $("t-profit").textContent = fm(cur.profit);
+  $("tileProfit").classList.toggle("neg", cur.profit < 0);
+  const cs = ["sales","ad","cogs","ret","profit"], ks = ["total","ad","cogs","ret","profit"], inv = [false,true,true,true,false];
+  cs.forEach((c,i) => prev ? chg($("c-"+c), cur[ks[i]], prev[ks[i]], inv[i]) : ($("c-"+c).textContent = "productweergave", $("c-"+c).className = "c"));
+  $("t-net").textContent = fm(cur.net); $("t-orders").textContent = int.format(cur.orders);
+  const roas = cur.ad > 0 ? cur.total/cur.ad : null;
+  $("t-roas").textContent = roas == null ? "–" : roas.toLocaleString("nl-NL",{maximumFractionDigits:2});
+  $("b-roas").innerHTML = roas == null ? "geen ad-uitgaven" : roasBadge(roas).replace(/^[^<]*/,"");
+  const margin = cur.net ? cur.profit/cur.net : null;
+  $("t-margin").textContent = margin == null ? "–" : pctf(margin);
+  const pc = profitClass(cur.profit, cur.net);
+  $("b-margin").innerHTML = margin == null ? "" : `<span class="badge ${pc}">${pc==="good"?"Gezond":pc==="bad"?"Te laag":"Gemiddeld"}</span>`;
+  $("t-fees").textContent = fm(cur.fees + cur.exp);
+  const contrib = cur.total ? (cur.net - cur.cogs - cur.fees) / cur.total : 0;
+  $("t-be").textContent = contrib > 0 ? (1/contrib).toLocaleString("nl-NL",{maximumFractionDigits:2}) : "–";
+
+  const warn = [];
+  if (cr.missing) warn.push(`${cr.missing} product(en) met verkopen hebben nog geen inkoopprijs. <a href="#products">Vul ze in</a> voor een kloppende winst.`);
+  if (st.adCurrency && st.adCurrency !== "GBP" && n(st.settings.fx) === 1) warn.push(`Je advertentieaccount rekent in ${esc(st.adCurrency)}. Stel de <a href="#settings">wisselkoers naar GBP</a> in.`);
+  $("setupWarn").hidden = !warn.length; $("setupWarn").innerHTML = warn.join("<br>");
+
+  renderGoal(cr.ratio); renderWaterfall(cur); renderTrend(cr.ratio); renderProducts();
+}
+function renderGoal(ratio){
+  const s = st.settings, t = today(), mStart = t.slice(0,8)+"01";
+  const dim = new Date(Date.UTC(+t.slice(0,4), +t.slice(5,7), 0)).getUTCDate();
+  const day = +t.slice(8,10);
+  const sales = (st.monthSales||[]).reduce((a,r)=>a+n(r.total_sales),0);
+  const goal = n(s.goalRev);
+  if (!goal){ $("goal").innerHTML = `<p class="note">Nog geen maanddoel. Stel er een in bij Instellingen.</p>`; return; }
+  const proj = sales / day * dim, pace = goal * day / dim, onPace = sales >= pace;
+  const mProfit = periodCalc(mStart, t, ratio).profit;
+  $("goal").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Omzetdoel ${new Date().toLocaleDateString("nl-NL",{month:"long"})}</b><span class="badge ${onPace?"good":"bad"}">${onPace?"Op schema":"Achter op schema"}</span></div>
+    <div class="big">${fm(sales)} <small>van ${money0.format(goal)}</small></div>
+    <div class="meter" role="img" aria-label="Voortgang ${Math.round(sales/goal*100)}%"><i style="width:${Math.min(sales/goal*100,100)}%"></i><b style="left:${Math.min(pace/goal*100,100)}%"></b></div>
+    <p class="note">Schema vandaag: ${money0.format(pace)} · Prognose eind van de maand: <b style="color:var(--${proj>=goal?"good":"bad"})">${money0.format(proj)}</b> ${proj<goal?`(${money0.format(goal-proj)} tekort)`:""}</p>
+    ${n(s.goalProfit) ? `<p class="note">Winst deze maand: <b>${fm(mProfit)}</b> van ${money0.format(n(s.goalProfit))}</p>` : ""}`;
+}
+function renderWaterfall(c){
+  const steps = [["Totale omzet", c.total, "var(--s-net)"], ["Btw, verzending, kortingen & retouren", -(c.total - c.net), "var(--dim)"], ["Inkoop (COGS)", -c.cogs, "var(--s-cogs)"], ["Advertenties", -c.ad, "var(--s-ad)"], ["Transactiekosten", -c.fees, "var(--mid)"], ["Vaste lasten", -c.exp, "var(--mid)"]];
+  const max = Math.max(c.total, 1);
+  $("waterfall").innerHTML = `<div style="display:grid;gap:7px">${steps.map(([l,v,col]) => `
+    <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) auto;gap:10px;align-items:center;font-size:12.5px"><span>${l}</span>
+    <div style="height:8px;background:var(--panel2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${Math.min(Math.abs(v)/max*100,100)}%;background:${col}"></div></div>
+    <span class="num" style="min-width:90px">${fm(v)}</span></div>`).join("")}
+    <div style="display:grid;grid-template-columns:1fr auto;gap:10px;border-top:1px solid var(--line);padding-top:8px;font-weight:700"><span>Nettowinst</span><span class="num" style="color:var(--${c.profit<0?"bad":"good"})">${fm(c.profit)}</span></div></div>`;
+}
+const SERIES = [["net","Netto omzet","--s-net"],["ad","Advertenties","--s-ad"],["cogs","COGS","--s-cogs"],["ret","Retouren","--s-ret"],["profit","Nettowinst","--s-profit"]];
+function renderLegend(){
+  $("legend").innerHTML = SERIES.map(([k,l,c]) => `<label><input type="checkbox" data-s="${k}" ${st.series[k]?"checked":""}><i style="background:var(${c})"></i>${l}</label>`).join("");
+  $("legend").querySelectorAll("input").forEach(i => i.onchange = () => { st.series[i.dataset.s] = i.checked; renderTrend(cogsRatio().ratio); });
+}
+function renderTrend(ratio){
+  const R = st.range, days = [];
+  for (let d = R.from; d <= R.to; d = addDays(d,1)) days.push(d);
+  const fx = n(st.settings.fx)||1;
+  const adBy = {}; st.ads.forEach(a => { if (inRange(a.date,R.from,R.to)) adBy[a.date] = (adBy[a.date]||0) + a.spend*fx; });
+  const shopBy = {}; st.shopDaily.forEach(r => shopBy[r.day] = r);
+  const pts = days.map(d => {
+    const r = shopBy[d] || {}; const net = n(r.net_sales), tot = n(r.total_sales), ord = n(r.orders);
+    const cogs = net*ratio, ad = adBy[d]||0, fees = tot*n(st.settings.feePct)/100 + ord*n(st.settings.feeFix), exp = expensesFor(d,d);
+    return {d, net, ad, cogs, ret:Math.abs(n(r.returns)), profit: net - cogs - ad - fees - exp};
+  });
+  $("trendSub").textContent = `per dag · ${new Date(R.from).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} – ${new Date(R.to).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}`;
+  const on = SERIES.filter(s => st.series[s[0]]);
+  const vals = pts.flatMap(p => on.map(s => p[s[0]]));
+  let max = Math.max(0, ...vals), min = Math.min(0, ...vals);
+  if (max === min) max = 1;
+  const step = niceStep((max-min)/4); max = Math.ceil(max/step)*step; min = Math.floor(min/step)*step;
+  const W = 1000, H = 280, L = 64, Rr = 16, T = 12, B = 28, iw = W-L-Rr, ih = H-T-B;
+  const x = i => L + (pts.length === 1 ? iw/2 : i*iw/(pts.length-1));
+  const y = v => T + (max - v)/(max - min)*ih;
+  let g = "";
+  for (let v = min; v <= max + 1e-9; v += step) g += `<line x1="${L}" x2="${W-Rr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" ${Math.abs(v)<1e-9?'stroke-width="1.5"':''}/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${money0.format(v)}</text>`;
+  const lstep = Math.ceil(pts.length/10);
+  const xl = pts.map((p,i) => (i%lstep===0 || i===pts.length-1) ? `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${new Date(p.d).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}</text>` : "").join("");
+  const lines = on.map(([k,,c]) => `<path d="${pts.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join("")}" fill="none" stroke="var(${c})" stroke-width="2" stroke-linejoin="round"/>`).join("");
+  const dots = on.map(([k,,c]) => `<circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1][k])}" r="3.5" fill="var(${c})"/>`).join("");
+  $("trend").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Netto omzet, advertenties, COGS, retouren en nettowinst per dag">${g}${lines}${dots}${xl}<line id="hair" y1="${T}" y2="${T+ih}" stroke="var(--muted)" stroke-dasharray="3 3" visibility="hidden"/><rect x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent" id="hov"/></svg><div class="tip" id="tip" hidden></div>`;
+  const svg = $("trend").querySelector("svg"), tip = $("tip"), hair = $("hair");
+  const hov = $("hov");
+  hov.onmousemove = ev => {
+    const rect = svg.getBoundingClientRect(), sx = (ev.clientX - rect.left) * W / rect.width;
+    const i = Math.max(0, Math.min(pts.length-1, Math.round((sx - L)/(iw/Math.max(pts.length-1,1)))));
+    const p = pts[i]; hair.setAttribute("x1", x(i)); hair.setAttribute("x2", x(i)); hair.setAttribute("visibility","visible");
+    tip.hidden = false;
+    tip.innerHTML = `<b style="font-family:var(--f-ui)">${new Date(p.d).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"})}</b>` + on.map(([k,l,c]) => `<span><i style="background:var(${c})"></i>${l}: ${fm(p[k])}</span>`).join("");
+    const px = x(i) * rect.width / W; tip.style.left = Math.min(px + 12, rect.width - 190) + "px"; tip.style.top = "10px";
+  };
+  hov.onmouseleave = () => { tip.hidden = true; hair.setAttribute("visibility","hidden"); };
+}
+function niceStep(v){ if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v/p; return (m<=1?1:m<=2?2:m<=5?5:10)*p; }
+const COLS = [["title","Product",false],["units","Aantal",true],["total","Totale omzet",true],["net","Netto omzet",true],["cogs","COGS",true],["ad","Advertenties",true],["ret","Retouren",true],["profit","Nettowinst",true],["roas","ROAS-status",true]];
+function tableHTML(rows, withPin){
+  if (!rows.length) return `<p class="empty">Geen producten met verkopen of advertenties in deze periode.</p>`;
+  return `<table><thead><tr>${withPin?'<th style="width:28px"></th>':""}${COLS.map(([k,l,num]) => `<th class="sort ${num?"num":""}" data-k="${k}">${l}${st.sort.key===k?(st.sort.dir<0?" ↓":" ↑"):""}</th>`).join("")}</tr></thead><tbody>${
+    rows.map(r => `<tr>${withPin?`<td><button class="pin" type="button" data-pin="${esc(r.id)}" aria-pressed="${!!st.watch[r.id]}" aria-label="Vastpinnen" ${r.id==="__unknown"?"disabled":""}>📌</button></td>`:""}
+      <td><div class="pname">${r.img?`<img src="${esc(r.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(r.title)}</b><small>${esc(r.sku||"")}</small></div></div></td>
+      <td class="num">${int.format(r.units)}</td><td class="num">${fm(r.total)}</td><td class="num">${fm(r.net)}</td>
+      <td class="num">${r.cogsMissing && r.id!=="__unknown" ? `<a href="#products" title="Inkoopprijs ontbreekt" style="color:var(--mid)">ontbreekt</a>` : fm(r.cogs)}</td>
+      <td class="num">${fm(r.ad)}</td><td class="num">${fm(r.ret)}</td>
+      <td class="num" style="color:var(--${r.profit<0?"bad":r.profit>0?"good":"muted"})">${fm(r.profit)}</td>
+      <td class="num">${roasBadge(r.roas)}</td></tr>`).join("")}</tbody></table>`;
+}
+function sortRows(rows){
+  const {key, dir} = st.sort;
+  return rows.sort((a,b) => { const va = a[key] ?? -Infinity, vb = b[key] ?? -Infinity; return (typeof va === "string" ? va.localeCompare(vb) : va - vb) * dir; });
+}
+function renderProducts(){
+  const all = sortRows(productRows());
+  const q = $("pSearch").value.trim().toLowerCase();
+  const rows = q ? all.filter(r => (r.title+" "+(r.sku||"")).toLowerCase().includes(q)) : all;
+  $("ptable").innerHTML = tableHTML(rows, true);
+  const watched = all.filter(r => st.watch[r.id]);
+  $("watch").innerHTML = watched.length ? tableHTML(watched, true) : `<p class="empty">Nog geen producten vastgepind. Klik op 📌 in de producttabel hieronder.</p>`;
+  document.querySelectorAll("th.sort").forEach(th => th.onclick = () => { const k = th.dataset.k; st.sort = {key:k, dir: st.sort.key===k ? -st.sort.dir : (k==="title"?1:-1)}; renderProducts(); });
+  document.querySelectorAll("[data-pin]").forEach(b => b.onclick = () => togglePin(b.dataset.pin));
+}
+
+/* ---------- COGS page ---------- */
+function renderCogs(){
+  if (!st.catalog.length){ $("cogsTable").innerHTML = `<p class="empty">Geen producten gevonden in Shopify.</p>`; return; }
+  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Verzending / stuk</th><th class="num">Marge per stuk</th><th></th></tr></thead><tbody>${
+    st.catalog.map(p => { const c = st.cogs[p.id] || {}; const margin = c.unitCost != null ? p.price - n(c.unitCost) - n(c.shipping) : null;
+      return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
+      <td class="num">${fm(p.price)}</td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${c.unitCost ?? ""}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${c.shipping ?? ""}" placeholder="0,00" aria-label="Verzendkosten ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
+      <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`${fm(margin)} <span class="drop" style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}</td>
+      <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>`;
+  document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
+}
+async function saveCogs(id){
+  const get = f => document.querySelector(`.cogsIn[data-id="${CSS.escape(id)}"][data-f="${f}"]`).value;
+  const p = st.catalog.find(x => x.id === id);
+  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:n(get("unitCost")), shipping:n(get("shipping")), updatedAt:Date.now()};
+  if (body.unitCost == null){ toast("Vul een inkoopprijs in."); return; }
+  await write(() => db.collection("cogs").doc(id).set(body), "Inkoopprijs opgeslagen");
+}
+
+/* ---------- Ads mapping ---------- */
+function adGroups(){
+  const R = st.range, fx = n(st.settings.fx)||1, map = new Map();
+  for (const a of st.ads){
+    if (!inRange(a.date, R.from, R.to)) continue;
+    const key = st.adLevel === "ad" ? "ad_"+a.aid : "cmp_"+a.cid;
+    const o = map.get(key) || {key, name: st.adLevel==="ad" ? a.ad : a.campaign, sub: st.adLevel==="ad" ? a.campaign : "", spend:0, value:0};
+    o.spend += a.spend*fx; o.value += a.value*fx; map.set(key, o);
+  }
+  return [...map.values()].sort((a,b) => b.spend - a.spend);
+}
+function mappedProductFor(key){
+  const m = st.mappings[key]; if (m) return m.productId;
+  if (key.startsWith("ad_")){ const a = st.ads.find(x => "ad_"+x.aid === key); if (a && st.mappings["cmp_"+a.cid]) return st.mappings["cmp_"+a.cid].productId; }
+  return null;
+}
+function renderAdsList(){
+  const list = $("adList");
+  if (st.metaState === "loading" && !st.ads.length){ list.innerHTML = `<p class="note skel">Meta-data laden…</p>`; return; }
+  const q = $("adSearch").value.trim().toLowerCase();
+  const groups = adGroups().filter(g => !q || (g.name+" "+g.sub).toLowerCase().includes(q));
+  if (!groups.length){ list.innerHTML = `<p class="empty">Geen ${st.adLevel==="ad"?"advertenties":"campagnes"} met uitgaven in deze periode.</p>`; updateAssign(); return; }
+  list.innerHTML = groups.map(g => { const pid = mappedProductFor(g.key); const prod = pid && st.catalog.find(p => p.id === pid);
+    return `<label class="item ${st.selAds.has(g.key)?"sel":""}"><input type="checkbox" data-ad="${esc(g.key)}" ${st.selAds.has(g.key)?"checked":""}>
+      <div class="grow"><b>${esc(g.name)}</b><small>${g.sub?esc(g.sub)+" · ":""}Uitgaven ${fm(g.spend)}${g.value?` · ROAS ${(g.value/g.spend||0).toLocaleString("nl-NL",{maximumFractionDigits:2})}`:""}</small></div>
+      ${pid ? `<span class="badge good" title="${esc(prod?.title||"")}">Gekoppeld${prod?": "+esc(prod.title.slice(0,18)):""}</span>${st.mappings[g.key]?`<button class="btn ghost" type="button" data-unmap="${esc(g.key)}" style="padding:3px 8px">×</button>`:""}` : `<span class="badge na">Niet gekoppeld</span>`}</label>`; }).join("");
+  list.querySelectorAll("[data-ad]").forEach(c => c.onchange = () => { c.checked ? st.selAds.add(c.dataset.ad) : st.selAds.delete(c.dataset.ad); c.closest(".item").classList.toggle("sel", c.checked); updateAssign(); });
+  list.querySelectorAll("[data-unmap]").forEach(b => b.onclick = ev => { ev.preventDefault(); write(() => db.collection("mappings").doc(b.dataset.unmap).delete(), "Koppeling verwijderd"); });
+  updateAssign();
+}
+function renderMapProducts(){
+  const R = st.range;
+  if (!st.catalog.length){ $("mapProducts").innerHTML = `<p class="empty">Geen producten gevonden.</p>`; return; }
+  const rows = productRows();
+  $("mapProducts").innerHTML = st.catalog.map(p => { const r = rows.find(x => x.id === p.id); const nAds = Object.values(st.mappings).filter(m => m.productId === p.id).length;
+    return `<label class="item ${st.selProduct===p.id?"sel":""}"><input type="radio" name="mp" value="${esc(p.id)}" ${st.selProduct===p.id?"checked":""}>${p.img?`<img src="${esc(p.img)}" alt="" style="width:34px;height:34px;border-radius:7px;object-fit:cover">`:""}
+      <div class="grow"><b>${esc(p.title)}</b><small>Omzet ${fm(r?.total||0)} · Winst ${fm(r?.profit||0)} · ROAS ${r?.roas!=null?r.roas.toLocaleString("nl-NL",{maximumFractionDigits:2}):"N.v.t."}</small></div>
+      ${nAds?`<span class="badge good">${nAds} gekoppeld</span>`:""}</label>`; }).join("");
+  $("mapProducts").querySelectorAll("input").forEach(r => r.onchange = () => { st.selProduct = r.value; renderMapProducts(); updateAssign(); });
+}
+function updateAssign(){ $("assignBtn").disabled = !(st.selAds.size && st.selProduct && canWrite); $("assignBtn").textContent = st.selAds.size ? `Koppel ${st.selAds.size} aan product` : "Koppel aan product"; }
+$("assignBtn").onclick = async () => {
+  const pid = st.selProduct, keys = [...st.selAds];
+  const groups = adGroups();
+  await write(() => Promise.all(keys.map(k => db.collection("mappings").doc(k).set({productId:pid, level:k.startsWith("ad_")?"ad":"campaign", name:groups.find(g=>g.key===k)?.name||"", at:Date.now()}))), `${keys.length} gekoppeld`);
+  st.selAds.clear(); renderAdsList();
+};
+document.querySelectorAll(".tabs [data-lvl]").forEach(b => b.onclick = () => { st.adLevel = b.dataset.lvl; st.selAds.clear(); document.querySelectorAll(".tabs [data-lvl]").forEach(x => x.setAttribute("aria-selected", String(x===b))); renderAdsList(); });
+$("adSearch").oninput = renderAdsList;
+
+/* ---------- Expenses ---------- */
+const FREQ = {monthly:"Maandelijks", weekly:"Wekelijks", yearly:"Jaarlijks"};
+function monthlyOf(e){ const a = n(e.amount); return e.frequency==="weekly" ? a*52/12 : e.frequency==="yearly" ? a/12 : a; }
+function renderExpenses(){
+  const R = st.range, active = st.expenses.filter(e => e.status === "active");
+  const mon = active.filter(e => e.recurring).reduce((s,e)=>s+monthlyOf(e),0);
+  $("e-month").textContent = fm(mon); $("e-year").textContent = fm(mon*12);
+  $("e-once").textContent = fm(active.filter(e => !e.recurring && inRange(e.startDate,R.from,R.to)).reduce((s,e)=>s+n(e.amount),0));
+  $("e-count").textContent = int.format(active.length);
+  const cats = [...new Set(st.expenses.map(e => e.category))];
+  const f = $("exFilter"), cur = f.value; f.innerHTML = `<option value="">Alle</option>` + cats.map(c => `<option>${esc(c)}</option>`).join(""); f.value = cur;
+  const rows = st.expenses.filter(e => !f.value || e.category === f.value).sort((a,b) => (b.startDate||"").localeCompare(a.startDate||""));
+  $("expTable").innerHTML = rows.length ? `<table><thead><tr><th>Naam</th><th>Categorie</th><th class="num">Bedrag</th><th>Frequentie</th><th>Startdatum</th><th>Status</th><th></th></tr></thead><tbody>${
+    rows.map(e => `<tr><td><b>${esc(e.name)}</b>${e.notes?`<br><small style="color:var(--dim)">${esc(e.notes)}</small>`:""}</td><td><span class="badge na">${esc(e.category)}</span></td><td class="num">${fm(n(e.amount))}</td>
+      <td>${e.recurring ? FREQ[e.frequency]||"Maandelijks" : "Eenmalig"}</td><td>${e.startDate?new Date(e.startDate).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):""}</td>
+      <td><span class="badge ${e.status==="active"?"good":"na"}">${e.status==="active"?"Actief":"Gepauzeerd"}</span></td>
+      <td style="white-space:nowrap"><button class="btn ghost" type="button" data-edit="${esc(e.id)}" ${canWrite?"":"disabled"}>Bewerken</button> <button class="btn ghost" type="button" data-del="${esc(e.id)}" ${canWrite?"":"disabled"}>Verwijderen</button></td></tr>`).join("")}</tbody></table>`
+    : `<p class="empty">Nog geen kosten. Voeg je apps, abonnementen en andere vaste lasten toe.</p>`;
+  $("expTable").querySelectorAll("[data-edit]").forEach(b => b.onclick = () => openExp(st.expenses.find(e => e.id === b.dataset.edit)));
+  $("expTable").querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    if (b.dataset.confirm){ write(() => db.collection("expenses").doc(b.dataset.del).delete(), "Kostenpost verwijderd"); }
+    else { b.dataset.confirm = "1"; b.textContent = "Zeker?"; b.style.color = "var(--bad)"; setTimeout(() => { if (b.isConnected){ delete b.dataset.confirm; b.textContent = "Verwijderen"; b.style.color = ""; } }, 3000); }
+  });
+}
+function openExp(e){
+  st.editExp = e?.id || null; $("expForm").hidden = false; $("expFormTitle").textContent = e ? "Kostenpost bewerken" : "Nieuwe kostenpost";
+  $("exName").value = e?.name || ""; $("exCat").value = e?.category || "Software & tools"; $("exAmt").value = e?.amount ?? "";
+  $("exStart").value = e?.startDate || today(); $("exRec").checked = !!e?.recurring; $("exFreq").disabled = !e?.recurring; $("exFreq").value = e?.frequency || "monthly";
+  $("exStatus").value = e?.status || "active"; $("exNotes").value = e?.notes || ""; $("exName").focus();
+}
+$("addExpBtn").onclick = () => openExp(null);
+$("expCancel").onclick = () => { $("expForm").hidden = true; };
+$("exRec").onchange = () => { $("exFreq").disabled = !$("exRec").checked; };
+$("exFilter").onchange = renderExpenses;
+$("expF").onsubmit = async ev => {
+  ev.preventDefault();
+  const body = {name:$("exName").value.trim(), category:$("exCat").value, amount:n($("exAmt").value), startDate:$("exStart").value, recurring:$("exRec").checked, frequency:$("exRec").checked?$("exFreq").value:null, status:$("exStatus").value, notes:$("exNotes").value.trim(), updatedAt:Date.now()};
+  const ref = st.editExp ? db.collection("expenses").doc(st.editExp) : db.collection("expenses").doc();
+  const ok = await write(() => ref.set(body), "Kostenpost opgeslagen");
+  if (ok) $("expForm").hidden = true;
+};
+
+/* ---------- settings ---------- */
+const SFIELDS = {fx:"fx", feePct:"feePct", feeFix:"feeFix", goalRev:"goalRev", goalProfit:"goalProfit", roasHi:"roasHi", roasLo:"roasLo", profHi:"profHi", profLo:"profLo", fallbackPct:"fallbackPct"};
+function fillSettings(){ for (const [k,id] of Object.entries(SFIELDS)) if (document.activeElement !== $(id)) $(id).value = st.settings[k]; renderConn(); }
+function renderConn(){
+  $("conn").innerHTML = `<dt>Shopify</dt><dd><i class="dot ${st.shopOk?"ok":"err"}"></i>ironvyofficial.com (GBP)</dd>
+    <dt>Meta Ads</dt><dd><i class="dot ${st.metaState==="ok"?"ok":st.metaState==="loading"?"warn":"err"}"></i>${esc(st.metaAccount || "via Windsor.ai")}${st.adCurrency?` (${esc(st.adCurrency)})`:""}</dd>`;
+  $("fxHint").textContent = st.adCurrency ? `1 ${st.adCurrency} = zoveel GBP${st.adCurrency==="GBP"?" (zelfde valuta: laat op 1)":""}` : "1 eenheid advertentievaluta = zoveel GBP";
+}
+async function saveSettings(keys, msg){
+  const body = {}; for (const k of keys) body[k] = n($(SFIELDS[k]).value);
+  await write(() => db.doc("config/settings").set({...st.settings, ...body, updatedAt:Date.now()}), msg);
+}
+$("saveSettings").onclick = () => saveSettings(["fx","goalRev","goalProfit","roasHi","roasLo","profHi","profLo"], "Instellingen opgeslagen");
+$("saveFees").onclick = () => saveSettings(["feePct","feeFix"], "Transactiekosten opgeslagen");
+$("saveFallback").onclick = () => saveSettings(["fallbackPct"], "Opgeslagen");
+
+/* ---------- watchlist ---------- */
+async function togglePin(id){
+  if (!db) return;
+  if (st.watch[id]) await write(() => db.collection("watchlist").doc(id).delete(), "Losgemaakt");
+  else await write(() => db.collection("watchlist").doc(id).set({at:Date.now()}), "Vastgepind");
+}
+
+/* ---------- db plumbing ---------- */
+async function write(fn, msg){
+  if (!db){ toast("Opslaan kan alleen binnen Claude."); return false; }
+  try { await fn(); if (msg) toast(msg); return true; }
+  catch(e){
+    if (e?.code === "invalid_argument"){ canWrite = false; toast("Je hebt alleen leesrechten op deze app."); }
+    else if (e?.code === "quota_exceeded") toast("De opslag van deze app is vol.");
+    else toast("Opslaan mislukt. Probeer het opnieuw.");
+    return false;
+  }
+}
+function subscribe(){
+  db.doc("config/settings").onSnapshot(s => { st.settings = {...DEFAULTS, ...(s.exists ? s.data() : {})}; fillSettings(); renderAll(); renderCogs(); }, dbErr);
+  db.collection("cogs").onSnapshot(s => { st.cogs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderCogs(); renderAll(); renderMapProducts(); }, dbErr);
+  db.collection("expenses").onSnapshot(s => { st.expenses = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); }, dbErr);
+  db.collection("mappings").onSnapshot(s => { st.mappings = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderAll(); renderMapProducts(); }, dbErr);
+  db.collection("watchlist").onSnapshot(s => { st.watch = Object.fromEntries(s.docs.map(d => [d.id, true])); renderDashboard(); }, dbErr);
+}
+function dbErr(e){ if (e?.code === "revoked" || e?.code === "not_granted") showPageErr("Je opgeslagen instellingen zijn in deze weergave niet beschikbaar."); }
+let toastT; function toast(m){ const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+function showPageErr(m){ $("pageErr").hidden = false; $("pageErr").textContent = m; }
+
+/* ---------- routing ---------- */
+function route(){
+  const v = (location.hash || "#dashboard").slice(1);
+  const name = ["dashboard","products","ads","expenses","ask","settings"].includes(v) ? v : "dashboard";
+  document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "v-"+name);
+  document.querySelectorAll(".side a").forEach(a => a.dataset.view === name ? a.setAttribute("aria-current","page") : a.removeAttribute("aria-current"));
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => location.hash = b.dataset.go);
+
+/* ---------- controls ---------- */
+try { const p = localStorage.getItem("ivp-preset"); if (p && [...$("preset").options].some(o => o.value === p)) $("preset").value = p; } catch {}
+$("preset").onchange = () => { try { localStorage.setItem("ivp-preset", $("preset").value); } catch {} $("customRange").hidden = $("preset").value !== "custom"; if ($("preset").value !== "custom" && mcp) loadAll(); };
+$("customRange").hidden = $("preset").value !== "custom";
+[$("dFrom"), $("dTo")].forEach(i => i.onchange = () => { if (mcp && $("dFrom").value && $("dTo").value) loadAll(); });
+$("prodFilter").onchange = renderDashboard;
+$("pSearch").oninput = renderProducts;
+$("reload").onclick = async () => { if (!mcp) return; try { await mcp.invalidate(SHOP); } catch {} loadAll(); };
+$("cogsReload").onclick = async () => { try { await mcp.invalidate(SHOP, PRODUCTS); } catch {} loadCatalog(); };
+
+/* ---------- Ask Claude ---------- */
+let ctl = null;
+document.querySelectorAll("[data-q]").forEach(b => b.onclick = () => { $("q").value = b.dataset.q; $("q").focus(); });
+async function setupAsk(){
+  const sample = await claude.use("sample");
+  if (!sample){ $("askBtn").disabled = true; $("trace").textContent = "Vragen stellen kan alleen binnen Claude."; return; }
+  $("stopBtn").onclick = () => ctl?.abort();
+  $("askBtn").onclick = async () => {
+    const question = $("q").value.trim(); if (!question){ $("q").focus(); return; }
+    if (!mcp){ $("answer").textContent = "Geen verbinding met Shopify in deze weergave."; return; }
+    ctl = new AbortController(); $("askBtn").disabled = true; $("stopBtn").hidden = false; $("answer").textContent = "Denkt na…"; $("trace").textContent = "";
+    const R = st.range, cr = cogsRatio(), cur = periodCalc(R.from, R.to, cr.ratio);
+    const ctx = {periode:{van:R.from, tot:R.to}, valuta:"GBP", instellingen:st.settings, totalen:cur,
+      producten: productRows().map(p => ({product:p.title, aantal:p.units, totale_omzet:+p.total.toFixed(2), netto_omzet:+p.net.toFixed(2), cogs:+p.cogs.toFixed(2), inkoop_ontbreekt:p.cogsMissing, ads:+p.ad.toFixed(2), winst:+p.profit.toFixed(2), roas:p.roas})),
+      kosten: st.expenses.map(e => ({naam:e.name, categorie:e.category, bedrag:e.amount, terugkerend:e.recurring, frequentie:e.frequency, start:e.startDate, status:e.status})),
+      advertentiecampagnes: (() => { const m = new Map(); st.ads.filter(a => inRange(a.date,R.from,R.to)).forEach(a => { const o = m.get(a.cid) || {campagne:a.campaign, uitgaven:0, aankopen:0, waarde:0}; o.uitgaven += a.spend; o.aankopen += a.purch; o.waarde += a.value; m.set(a.cid,o); }); return [...m.values()]; })(),
+      advertentievaluta: st.adCurrency, wisselkoers_naar_gbp: st.settings.fx};
+    const tools = [{
+      name:"shopifyql", description:"Voert één ShopifyQL-query uit op de Ironvy-winkel en geeft {columns, rows}. Syntax: FROM <sales|sessions|orders|customers|inventory> SHOW <metrics> [GROUP BY ..] [TIMESERIES day|week|month] SINCE <-30d|YYYY-MM-DD> UNTIL <today|YYYY-MM-DD> [COMPARE TO previous_period]. Percentages zijn ratio's. Bedragen in GBP.",
+      inputSchema:{type:"object", properties:{query:{type:"string"}}, required:["query"]},
+      async execute(input, c){ $("trace").textContent = "Shopify: " + input.query; try { const r = await mcp.callTool(SHOP, SQL, {query:String(input.query||"")}, {signal:c.signal}); const p = r.payload||{}; return {columns:(p.columns||[]).map(x=>x.name), rows:(p.rows||[]).slice(0,200)}; } catch(e){ throw new Error(errMsg("Shopify", e)); } }
+    }];
+    const prompt = `Je bent de e-commerce-analist van Ironvy (Shopify, GBP). Vandaag is ${today()}.
+Hieronder staat de winstdata die de app al berekend heeft (nettowinst = netto omzet − inkoop − ads − transactiekosten − vaste lasten). Gebruik de shopifyql-tool alleen als je extra Shopify-cijfers nodig hebt. Verzin nooit cijfers; zeg het als data ontbreekt (bijv. ontbrekende inkoopprijzen).
+Antwoord in het Nederlands: eerst de kernconclusie in 1–2 zinnen, dan de cijfers, dan maximaal 3 concrete acties.
+
+DATA:
+${JSON.stringify(ctx).slice(0, 60000)}
+
+VRAAG: ${question}`;
+    try { await sample(prompt, {tools, signal:ctl.signal, cache:false, onText:({text}) => { $("answer").textContent = text; $("trace").textContent = ""; }}); }
+    catch(e){ $("answer").textContent = e.text || ""; const m = {not_granted:"Je hebt Claude niet toegestaan voor deze pagina.", rate_limited:"Te veel vragen tegelijk, probeer het zo opnieuw.", cancelled:""}; const msg = e.code in m ? m[e.code] : "De analyse is niet afgerond. Probeer het opnieuw."; if (msg) $("trace").textContent = msg; }
+    finally { $("askBtn").disabled = false; $("stopBtn").hidden = true; }
+  };
+}
+
+/* ---------- boot ---------- */
+route(); renderLegend(); fillSettings();
+(async () => {
+  setupAsk();
+  const [m, d, u] = await Promise.all([claude.use("mcp"), claude.use("db"), claude.use("user")]);
+  mcp = m; db = d;
+  if (u){ try { const w = await u.can("data.write"); if (w === false) canWrite = false; } catch {} }
+  if (db) subscribe(); else showPageErr("Opgeslagen inkoopprijzen en kosten zijn in deze weergave niet beschikbaar. Open de app in Claude.");
+  if (!mcp){ showPageErr("Deze weergave kan Shopify en Meta niet bereiken. Open de app in claude.ai."); $("stamp").textContent = "Geen live verbinding"; return; }
+  loadAll(); loadCatalog(); loadMetaAccount();
+})();
+})();
+</script>
