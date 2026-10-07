@@ -207,7 +207,7 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
         <div class="tile"><span class="l">Bestellingen</span><span class="v" id="t-orders">–</span></div>
         <div class="tile"><span class="l">ROAS</span><span class="v" id="t-roas">–</span><span class="c" id="b-roas"></span></div>
         <div class="tile"><span class="l">Winstmarge</span><span class="v" id="t-margin">–</span><span class="c" id="b-margin"></span></div>
-        <div class="tile"><span class="l">Kosten & fees</span><span class="v" id="t-fees">–</span><span class="hint">transactiekosten + vaste lasten</span></div>
+        <div class="tile"><span class="l">Kosten & fees</span><span class="v" id="t-fees">–</span><span class="hint">verzending + transactiekosten + vaste lasten</span></div>
         <div class="tile"><span class="l">Break-even ROAS</span><span class="v" id="t-be">–</span><span class="hint">onder deze ROAS lever je in</span></div>
       </div>
 
@@ -242,7 +242,7 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
 
     <!-- PRODUCTS / COGS -->
     <section class="view" id="v-products" hidden>
-      <div><h1>Producten & inkoop</h1><p class="sub">Vul per product je inkoopprijs en verzendkosten per stuk in. Zonder inkoopprijs kan de nettowinst niet kloppen.</p></div>
+      <div><h1>Producten & inkoop</h1><p class="sub">Vul per product je inkoopprijs per stuk in. Zonder inkoopprijs kan de nettowinst niet kloppen. Verzendkosten per bestelling stel je in bij <a href="#expenses">Kosten</a>.</p></div>
       <div class="card">
         <div class="cardhead"><div><h2>Inkoopkosten per product</h2><p class="sub" id="cogsSub">Wordt direct opgeslagen voor iedereen met toegang</p></div><button class="btn" type="button" id="cogsReload">Producten verversen</button></div>
         <div class="tscroll" id="cogsTable"><p class="note skel">Producten laden…</p></div>
@@ -305,6 +305,14 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
           <div class="field"><label for="feePct">Percentage van omzet</label><input id="feePct" type="number" min="0" step="0.01"></div>
           <div class="field"><label for="feeFix">Vast bedrag per bestelling (<span class="ccyLbl">GBP</span>)</label><input id="feeFix" type="number" min="0" step="0.01"></div>
           <div class="field full" style="display:flex;justify-content:flex-end"><button class="btn" type="button" id="saveFees">Opslaan</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Verzendkosten per bestelling</h2>
+        <p class="note" style="margin:6px 0 12px">Wat jij per pakket betaalt, één keer per bestelling, ongeacht hoeveel producten erin zitten. Een bundel van 2+1 in één pakket telt dus één keer.</p>
+        <div class="form">
+          <div class="field"><label for="shipPerOrder">Verzendkosten per bestelling (<span class="ccyLbl">GBP</span>)</label><input id="shipPerOrder" type="number" min="0" step="0.01"></div>
+          <div class="field" style="display:flex;align-items:flex-end;justify-content:flex-end"><button class="btn" type="button" id="saveShip">Opslaan</button></div>
         </div>
       </div>
     </section>
@@ -400,7 +408,7 @@ const fd0 = v => fmtD[disp][1].format(conv(v));
 const rateNow = () => disp === "EUR" ? (parseFloat(st.settings.eurRate) || 1.17) : 1;
 const toDisp = v => v == null || v === "" ? "" : +(n(v) * rateNow()).toFixed(2);
 const fromDisp = v => n(v) / rateNow();
-const MONEY_SETTINGS = ["feeFix","goalRev","goalProfit"];
+const MONEY_SETTINGS = ["feeFix","goalRev","goalProfit","shipPerOrder"];
 const pctf = v => (v*100).toLocaleString("nl-NL",{maximumFractionDigits:1}) + "%";
 const dstr = d => d.toISOString().slice(0,10);
 const addDays = (s, k) => { const d = new Date(s+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+k); return dstr(d); };
@@ -408,7 +416,7 @@ const daysBetween = (a, b) => Math.round((new Date(b+"T00:00:00Z") - new Date(a+
 const today = () => dstr(new Date());
 
 /* ---------- state ---------- */
-const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0, eurRate:1.17};
+const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0, eurRate:1.17, shipPerOrder:0};
 const st = {
   settings:{...DEFAULTS}, cogs:{}, expenses:[], mappings:{}, watch:{},
   range:{from:null,to:null,prevFrom:null,prevTo:null},
@@ -643,8 +651,9 @@ function periodCalc(from, to, ratio){
   const cogs = s.net * ratio;
   const fees = s.total * n(st.settings.feePct)/100 + s.orders * n(st.settings.feeFix);
   const exp = expensesFor(from, to);
-  const profit = s.net - cogs - ad.spend - fees - exp;
-  return {...s, ad:ad.spend, adValue:ad.value, cogs, fees, exp, profit};
+  const ship = s.orders * n(st.settings.shipPerOrder);
+  const profit = s.net - cogs - ad.spend - fees - ship - exp;
+  return {...s, ad:ad.spend, adValue:ad.value, cogs, fees, ship, exp, profit};
 }
 function productRows(){
   const rate = productCostRate(), R = st.range;
@@ -666,7 +675,8 @@ function productRows(){
     o.cogsMissing = c == null;
     o.ad = o.id !== "__unknown" ? adSpendFor(R.from, R.to, o.id).spend : 0;
     o.fees = shopTot.total ? (o.total/shopTot.total) * (shopTot.total*n(st.settings.feePct)/100 + shopTot.orders*n(st.settings.feeFix)) : 0;
-    o.profit = o.net - o.cogs - o.ad - o.fees;
+    o.ship = o.orders * n(st.settings.shipPerOrder);
+    o.profit = o.net - o.cogs - o.ad - o.fees - o.ship;
     o.roas = o.ad > 0 ? o.total / o.ad : null;
     return o;
   });
@@ -710,7 +720,7 @@ function renderDashboard(){
   let cur, prev;
   if (pf){
     const row = productRows().find(p => p.id === pf) || {total:0,net:0,ret:0,orders:0,cogs:0,ad:0,fees:0,profit:0};
-    cur = {total:row.total, net:row.net, ret:row.ret, orders:row.orders, cogs:row.cogs, ad:row.ad, fees:row.fees, exp:0, profit:row.profit, adValue:0};
+    cur = {total:row.total, net:row.net, ret:row.ret, orders:row.orders, cogs:row.cogs, ad:row.ad, fees:row.fees, ship:row.ship, exp:0, profit:row.profit, adValue:0};
     prev = null;
   } else {
     cur = periodCalc(R.from, R.to, cr.ratio);
@@ -731,8 +741,8 @@ function renderDashboard(){
   $("t-margin").textContent = margin == null ? "–" : pctf(margin);
   const pc = profitClass(cur.profit, cur.net);
   $("b-margin").innerHTML = margin == null ? "" : `<span class="badge ${pc}">${pc==="good"?"Gezond":pc==="bad"?"Te laag":"Gemiddeld"}</span>`;
-  $("t-fees").textContent = fd(cur.fees + cur.exp);
-  const contrib = cur.total ? (cur.net - cur.cogs - cur.fees) / cur.total : 0;
+  $("t-fees").textContent = fd(cur.fees + cur.ship + cur.exp);
+  const contrib = cur.total ? (cur.net - cur.cogs - cur.fees - cur.ship) / cur.total : 0;
   $("t-be").textContent = contrib > 0 ? (1/contrib).toLocaleString("nl-NL",{maximumFractionDigits:2}) : "–";
 
   const warn = [];
@@ -759,7 +769,7 @@ function renderGoal(ratio){
     ${n(s.goalProfit) ? `<p class="note">Winst deze maand: <b>${fd(mProfit)}</b> van ${fd0(n(s.goalProfit))}</p>` : ""}`;
 }
 function renderWaterfall(c){
-  const steps = [["Totale omzet", c.total, "var(--s-net)"], ["Btw, verzending, kortingen & retouren", -(c.total - c.net), "var(--dim)"], ["Inkoop (COGS)", -c.cogs, "var(--s-cogs)"], ["Advertenties", -c.ad, "var(--s-ad)"], ["Transactiekosten", -c.fees, "var(--mid)"], ["Vaste lasten", -c.exp, "var(--mid)"]];
+  const steps = [["Totale omzet", c.total, "var(--s-net)"], ["Btw, kortingen & retouren", -(c.total - c.net), "var(--dim)"], ["Inkoop (COGS)", -c.cogs, "var(--s-cogs)"], ["Advertenties", -c.ad, "var(--s-ad)"], ["Verzending", -c.ship, "var(--s-cogs)"], ["Transactiekosten", -c.fees, "var(--mid)"], ["Vaste lasten", -c.exp, "var(--mid)"]];
   const max = Math.max(c.total, 1);
   $("waterfall").innerHTML = `<div style="display:grid;gap:7px">${steps.map(([l,v,col]) => `
     <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,2fr) auto;gap:10px;align-items:center;font-size:12.5px"><span>${l}</span>
@@ -780,8 +790,8 @@ function renderTrend(ratio){
   const shopBy = {}; st.shopDaily.forEach(r => shopBy[r.day] = r);
   const pts = days.map(d => {
     const r = shopBy[d] || {}; const net = n(r.net_sales), tot = n(r.total_sales), ord = n(r.orders);
-    const cogs = net*ratio, ad = adBy[d]||0, fees = tot*n(st.settings.feePct)/100 + ord*n(st.settings.feeFix), exp = expensesFor(d,d);
-    return {d, net, ad, cogs, ret:Math.abs(n(r.returns)), profit: net - cogs - ad - fees - exp};
+    const cogs = net*ratio, ad = adBy[d]||0, fees = tot*n(st.settings.feePct)/100 + ord*n(st.settings.feeFix), exp = expensesFor(d,d), ship = ord*n(st.settings.shipPerOrder);
+    return {d, net, ad, cogs, ret:Math.abs(n(r.returns)), profit: net - cogs - ad - fees - ship - exp};
   });
   $("trendSub").textContent = `per dag · ${new Date(R.from).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} – ${new Date(R.to).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}`;
   const on = SERIES.filter(s => st.series[s[0]]);
@@ -842,12 +852,12 @@ function renderProducts(){
 /* ---------- COGS page ---------- */
 function renderCogs(){
   if (!st.catalog.length){ $("cogsTable").innerHTML = `<p class="empty">Geen producten gevonden in Shopify.</p>`; return; }
-  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Verzending / stuk</th><th class="num">Marge per stuk</th><th></th></tr></thead><tbody>${
+  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Extra kosten / stuk<br><small style="font-weight:400;color:var(--dim)">bijv. verpakking</small></th><th class="num">Marge per stuk</th><th></th></tr></thead><tbody>${
     st.catalog.map(p => { const c = st.cogs[p.id] || {}; const margin = c.unitCost != null ? p.price - n(c.unitCost) - n(c.shipping) : null;
       return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
       <td class="num">${fd(p.price)}</td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
-      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Verzendkosten ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
       <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`${fd(margin)} <span class="drop" style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}</td>
       <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>`;
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
@@ -953,7 +963,7 @@ $("expF").onsubmit = async ev => {
 };
 
 /* ---------- settings ---------- */
-const SFIELDS = {fx:"fx", feePct:"feePct", feeFix:"feeFix", goalRev:"goalRev", goalProfit:"goalProfit", roasHi:"roasHi", roasLo:"roasLo", profHi:"profHi", profLo:"profLo", fallbackPct:"fallbackPct", eurRate:"eurRate"};
+const SFIELDS = {fx:"fx", feePct:"feePct", feeFix:"feeFix", goalRev:"goalRev", goalProfit:"goalProfit", roasHi:"roasHi", roasLo:"roasLo", profHi:"profHi", profLo:"profLo", fallbackPct:"fallbackPct", eurRate:"eurRate", shipPerOrder:"shipPerOrder"};
 function fillSettings(){ for (const [k,id] of Object.entries(SFIELDS)) if (document.activeElement !== $(id)) $(id).value = MONEY_SETTINGS.includes(k) ? toDisp(st.settings[k]) : st.settings[k]; renderConn(); }
 function renderConn(){
   $("conn").innerHTML = `<dt>Shopify</dt><dd><i class="dot ${st.shopOk?"ok":"err"}"></i>ironvyofficial.com (GBP)</dd>
@@ -966,6 +976,7 @@ async function saveSettings(keys, msg){
 }
 $("saveSettings").onclick = () => saveSettings(["fx","eurRate","goalRev","goalProfit","roasHi","roasLo","profHi","profLo"], "Instellingen opgeslagen");
 $("saveFees").onclick = () => saveSettings(["feePct","feeFix"], "Transactiekosten opgeslagen");
+$("saveShip").onclick = () => saveSettings(["shipPerOrder"], "Verzendkosten opgeslagen");
 $("saveFallback").onclick = () => saveSettings(["fallbackPct"], "Opgeslagen");
 
 /* ---------- watchlist ---------- */
@@ -1061,7 +1072,7 @@ async function setupAsk(){
       async execute(input, c){ $("trace").textContent = "Shopify: " + input.query; try { const r = await mcp.callTool(SHOP, SQL, {query:String(input.query||"")}, {signal:c.signal}); const p = r.payload||{}; return {columns:(p.columns||[]).map(x=>x.name), rows:(p.rows||[]).slice(0,200)}; } catch(e){ throw new Error(errMsg("Shopify", e)); } }
     }];
     const prompt = `Je bent de e-commerce-analist van Ironvy (Shopify, GBP). Vandaag is ${today()}.${TEST ? "\nLET OP: de app staat in TESTMODUS. Alle cijfers hieronder zijn verzonnen testdata; zeg dat er kort bij. Er is geen Shopify-tool beschikbaar." : ""}
-Hieronder staat de winstdata die de app al berekend heeft (nettowinst = netto omzet − inkoop − ads − transactiekosten − vaste lasten). Gebruik de shopifyql-tool alleen als je extra Shopify-cijfers nodig hebt. Verzin nooit cijfers; zeg het als data ontbreekt (bijv. ontbrekende inkoopprijzen).
+Hieronder staat de winstdata die de app al berekend heeft (nettowinst = netto omzet − inkoop − ads − transactiekosten − verzendkosten per bestelling − vaste lasten). Gebruik de shopifyql-tool alleen als je extra Shopify-cijfers nodig hebt. Verzin nooit cijfers; zeg het als data ontbreekt (bijv. ontbrekende inkoopprijzen).
 Alle bedragen in DATA zijn GBP. ${disp==="EUR"?`De gebruiker kijkt in euro: noem bedragen in EUR, omgerekend tegen 1 GBP = ${rateNow()} EUR.`:""}
 Antwoord in het Nederlands: eerst de kernconclusie in 1–2 zinnen, dan de cijfers, dan maximaal 3 concrete acties.
 
