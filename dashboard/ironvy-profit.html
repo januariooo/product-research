@@ -332,7 +332,7 @@ tr:last-child td{border-bottom:0}
         <div class="card">
           <h2>Valuta</h2>
           <div class="form" style="margin-top:12px">
-            <div class="field full"><label for="eurRate">Koers GBP → EUR (voor de euro-weergave)</label><input id="eurRate" type="number" min="0" step="0.0001"><small>1 GBP = zoveel EUR. Pas dit af en toe aan naar de actuele koers.</small></div>
+            <div class="field full"><label for="eurRate">Koers GBP → EUR (voor de euro-weergave)</label><input id="eurRate" type="number" min="0" step="0.0001"><small id="eurRateInfo">1 GBP = zoveel EUR. Wordt elke ochtend automatisch bijgewerkt; je kunt hem ook zelf aanpassen.</small></div>
             <div class="field full"><label for="fx">Wisselkoers Meta-valuta → GBP</label><input id="fx" type="number" min="0" step="0.0001"><small id="fxHint">1 eenheid advertentievaluta = zoveel GBP</small></div>
           </div>
         </div>
@@ -656,7 +656,7 @@ function renderDashboard(){
     prev = periodCalc(R.prevFrom, R.prevTo, cr.ratio);
   }
   $("eurNote").hidden = disp !== "EUR";
-  $("eurNote").textContent = `Bedragen omgerekend naar euro tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}. Koers aanpassen kan bij Instellingen.`;
+  $("eurNote").textContent = `Bedragen omgerekend naar euro tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}. Koers${st.settings.eurRateDate ? " van "+new Date(st.settings.eurRateDate).toLocaleDateString("nl-NL",{day:"numeric",month:"long"}) : ""}, wordt dagelijks bijgewerkt.`;
   $("t-sales").textContent = fd(cur.total); $("t-ad").textContent = fd(cur.ad); $("t-cogs").textContent = fd(cur.cogs);
   $("t-ret").textContent = fd(cur.ret); $("t-profit").textContent = fd(cur.profit);
   $("tileProfit").classList.toggle("neg", cur.profit < 0);
@@ -956,7 +956,9 @@ $("prodFilter").onchange = renderDashboard;
 $("dispCcy").value = disp;
 function applyCcy(full){
   document.querySelectorAll(".ccyLbl").forEach(el => el.textContent = disp);
-  const note = disp === "EUR" ? `Alle bedragen in euro, omgerekend tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}. Wat je invult wordt ook in euro gelezen.` : "";
+  const upd = st.settings.eurRateDate ? ` (koers van ${new Date(st.settings.eurRateDate).toLocaleDateString("nl-NL",{day:"numeric",month:"long"})})` : "";
+  $("eurRateInfo").textContent = `1 GBP = zoveel EUR. Wordt elke ochtend automatisch bijgewerkt${upd ? ", laatst"+upd : ""}; je kunt hem ook zelf aanpassen.`;
+  const note = disp === "EUR" ? `Alle bedragen in euro, omgerekend tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}${upd}. Wat je invult wordt ook in euro gelezen.` : "";
   $("eurNoteS").hidden = !note; $("eurNoteS").textContent = note;
   if (full){ $("expForm").hidden = true; renderAll(); if (st.catalog.length){ renderCogs(); renderMapProducts(); } fillSettings(); }
 }
