@@ -177,7 +177,7 @@ tr:last-child td{border-bottom:0}
       <label class="chipsel">Product
         <select id="prodFilter" aria-label="Product"><option value="">Alle producten</option></select>
       </label>
-      <label class="chipsel" id="ccyWrap">Valuta <select id="dispCcy" aria-label="Valuta in dashboard"><option value="GBP">£ GBP</option><option value="EUR">€ EUR</option></select></label>
+      <label class="chipsel" id="ccyWrap">Valuta <select id="dispCcy" aria-label="Valuta"><option value="GBP">£ GBP</option><option value="EUR">€ EUR</option></select></label>
       <div class="grow"></div>
       <div class="status" id="status"><span><i class="dot" id="dShop"></i>Shopify</span><span><i class="dot" id="dMeta"></i>Meta</span><span id="stamp"></span></div>
       <button class="btn" id="reload" type="button">Vernieuwen</button>
@@ -279,7 +279,7 @@ tr:last-child td{border-bottom:0}
         <form id="expF" class="form">
           <div class="field"><label for="exName">Naam</label><input id="exName" required placeholder="Bijv. Klaviyo"></div>
           <div class="field"><label for="exCat">Categorie</label><select id="exCat"><option>Software & tools</option><option>Bureau / freelancer</option><option>Agency top-up fees</option><option>Verzending & fulfilment</option><option>Content & creatives</option><option>Overig</option></select></div>
-          <div class="field"><label for="exAmt">Bedrag (GBP)</label><input id="exAmt" type="number" min="0" step="0.01" required></div>
+          <div class="field"><label for="exAmt">Bedrag (<span class="ccyLbl">GBP</span>)</label><input id="exAmt" type="number" min="0" step="0.01" required></div>
           <div class="field"><label for="exStart">Startdatum</label><input id="exStart" type="date" required></div>
           <div class="field full"><label class="check"><input type="checkbox" id="exRec"> Dit is een terugkerende kostenpost</label></div>
           <div class="field"><label for="exFreq">Frequentie</label><select id="exFreq" disabled><option value="monthly">Maandelijks</option><option value="weekly">Wekelijks</option><option value="yearly">Jaarlijks</option></select></div>
@@ -297,7 +297,7 @@ tr:last-child td{border-bottom:0}
         <p class="note" style="margin:6px 0 12px">Wordt per bestelling berekend: een percentage van de omzet plus een vast bedrag. Shopify Payments UK Basic is ongeveer 2% + £0,25 (controleer je eigen tarief).</p>
         <div class="form">
           <div class="field"><label for="feePct">Percentage van omzet</label><input id="feePct" type="number" min="0" step="0.01"></div>
-          <div class="field"><label for="feeFix">Vast bedrag per bestelling (GBP)</label><input id="feeFix" type="number" min="0" step="0.01"></div>
+          <div class="field"><label for="feeFix">Vast bedrag per bestelling (<span class="ccyLbl">GBP</span>)</label><input id="feeFix" type="number" min="0" step="0.01"></div>
           <div class="field full" style="display:flex;justify-content:flex-end"><button class="btn" type="button" id="saveFees">Opslaan</button></div>
         </div>
       </div>
@@ -322,7 +322,7 @@ tr:last-child td{border-bottom:0}
 
     <!-- SETTINGS -->
     <section class="view" id="v-settings" hidden>
-      <div><h1>Instellingen</h1><p class="sub">Geldt voor iedereen die deze app gebruikt.</p></div>
+      <div><h1>Instellingen</h1><p class="sub">Geldt voor iedereen die deze app gebruikt.</p><p class="note" id="eurNoteS" hidden></p></div>
       <div class="row2">
         <div class="card">
           <h2>Koppelingen</h2>
@@ -332,7 +332,7 @@ tr:last-child td{border-bottom:0}
         <div class="card">
           <h2>Valuta</h2>
           <div class="form" style="margin-top:12px">
-            <div class="field full"><label for="eurRate">Koers GBP → EUR (voor de euro-weergave in het dashboard)</label><input id="eurRate" type="number" min="0" step="0.0001"><small>1 GBP = zoveel EUR. Pas dit af en toe aan naar de actuele koers.</small></div>
+            <div class="field full"><label for="eurRate">Koers GBP → EUR (voor de euro-weergave)</label><input id="eurRate" type="number" min="0" step="0.0001"><small>1 GBP = zoveel EUR. Pas dit af en toe aan naar de actuele koers.</small></div>
             <div class="field full"><label for="fx">Wisselkoers Meta-valuta → GBP</label><input id="fx" type="number" min="0" step="0.0001"><small id="fxHint">1 eenheid advertentievaluta = zoveel GBP</small></div>
           </div>
         </div>
@@ -340,8 +340,8 @@ tr:last-child td{border-bottom:0}
       <div class="card">
         <h2>Maanddoel</h2>
         <div class="form" style="margin-top:12px">
-          <div class="field"><label for="goalRev">Omzetdoel per maand (GBP)</label><input id="goalRev" type="number" min="0" step="1"></div>
-          <div class="field"><label for="goalProfit">Winstdoel per maand (GBP, optioneel)</label><input id="goalProfit" type="number" min="0" step="1"></div>
+          <div class="field"><label for="goalRev">Omzetdoel per maand (<span class="ccyLbl">GBP</span>)</label><input id="goalRev" type="number" min="0" step="1"></div>
+          <div class="field"><label for="goalProfit">Winstdoel per maand (<span class="ccyLbl">GBP</span>, optioneel)</label><input id="goalProfit" type="number" min="0" step="1"></div>
         </div>
       </div>
       <div class="row2">
@@ -390,6 +390,11 @@ const fmtD = {GBP:[money, money0], EUR:[new Intl.NumberFormat("nl-NL",{style:"cu
 const conv = v => (v || 0) * (disp === "EUR" ? (parseFloat(st.settings.eurRate) || 1.17) : 1);
 const fd = v => fmtD[disp][0].format(conv(v));
 const fd0 = v => fmtD[disp][1].format(conv(v));
+/* inputs: shown in the chosen currency, stored in GBP */
+const rateNow = () => disp === "EUR" ? (parseFloat(st.settings.eurRate) || 1.17) : 1;
+const toDisp = v => v == null || v === "" ? "" : +(n(v) * rateNow()).toFixed(2);
+const fromDisp = v => n(v) / rateNow();
+const MONEY_SETTINGS = ["feeFix","goalRev","goalProfit"];
 const pctf = v => (v*100).toLocaleString("nl-NL",{maximumFractionDigits:1}) + "%";
 const dstr = d => d.toISOString().slice(0,10);
 const addDays = (s, k) => { const d = new Date(s+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+k); return dstr(d); };
@@ -779,17 +784,17 @@ function renderCogs(){
   $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Verzending / stuk</th><th class="num">Marge per stuk</th><th></th></tr></thead><tbody>${
     st.catalog.map(p => { const c = st.cogs[p.id] || {}; const margin = c.unitCost != null ? p.price - n(c.unitCost) - n(c.shipping) : null;
       return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
-      <td class="num">${fm(p.price)}</td>
-      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${c.unitCost ?? ""}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
-      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${c.shipping ?? ""}" placeholder="0,00" aria-label="Verzendkosten ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
-      <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`${fm(margin)} <span class="drop" style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}</td>
+      <td class="num">${fd(p.price)}</td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Verzendkosten ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
+      <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`${fd(margin)} <span class="drop" style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}</td>
       <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>`;
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
 }
 async function saveCogs(id){
   const get = f => document.querySelector(`.cogsIn[data-id="${CSS.escape(id)}"][data-f="${f}"]`).value;
   const p = st.catalog.find(x => x.id === id);
-  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:n(get("unitCost")), shipping:n(get("shipping")), updatedAt:Date.now()};
+  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), updatedAt:Date.now()};
   if (body.unitCost == null){ toast("Vul een inkoopprijs in."); return; }
   await write(() => db.collection("cogs").doc(id).set(body), "Inkoopprijs opgeslagen");
 }
@@ -818,7 +823,7 @@ function renderAdsList(){
   if (!groups.length){ list.innerHTML = `<p class="empty">Geen ${st.adLevel==="ad"?"advertenties":"campagnes"} met uitgaven in deze periode.</p>`; updateAssign(); return; }
   list.innerHTML = groups.map(g => { const pid = mappedProductFor(g.key); const prod = pid && st.catalog.find(p => p.id === pid);
     return `<label class="item ${st.selAds.has(g.key)?"sel":""}"><input type="checkbox" data-ad="${esc(g.key)}" ${st.selAds.has(g.key)?"checked":""}>
-      <div class="grow"><b>${esc(g.name)}</b><small>${g.sub?esc(g.sub)+" · ":""}Uitgaven ${fm(g.spend)}${g.value?` · ROAS ${(g.value/g.spend||0).toLocaleString("nl-NL",{maximumFractionDigits:2})}`:""}</small></div>
+      <div class="grow"><b>${esc(g.name)}</b><small>${g.sub?esc(g.sub)+" · ":""}Uitgaven ${fd(g.spend)}${g.value?` · ROAS ${(g.value/g.spend||0).toLocaleString("nl-NL",{maximumFractionDigits:2})}`:""}</small></div>
       ${pid ? `<span class="badge good" title="${esc(prod?.title||"")}">Gekoppeld${prod?": "+esc(prod.title.slice(0,18)):""}</span>${st.mappings[g.key]?`<button class="btn ghost" type="button" data-unmap="${esc(g.key)}" style="padding:3px 8px">×</button>`:""}` : `<span class="badge na">Niet gekoppeld</span>`}</label>`; }).join("");
   list.querySelectorAll("[data-ad]").forEach(c => c.onchange = () => { c.checked ? st.selAds.add(c.dataset.ad) : st.selAds.delete(c.dataset.ad); c.closest(".item").classList.toggle("sel", c.checked); updateAssign(); });
   list.querySelectorAll("[data-unmap]").forEach(b => b.onclick = ev => { ev.preventDefault(); write(() => db.collection("mappings").doc(b.dataset.unmap).delete(), "Koppeling verwijderd"); });
@@ -830,7 +835,7 @@ function renderMapProducts(){
   const rows = productRows();
   $("mapProducts").innerHTML = st.catalog.map(p => { const r = rows.find(x => x.id === p.id); const nAds = Object.values(st.mappings).filter(m => m.productId === p.id).length;
     return `<label class="item ${st.selProduct===p.id?"sel":""}"><input type="radio" name="mp" value="${esc(p.id)}" ${st.selProduct===p.id?"checked":""}>${p.img?`<img src="${esc(p.img)}" alt="" style="width:34px;height:34px;border-radius:7px;object-fit:cover">`:""}
-      <div class="grow"><b>${esc(p.title)}</b><small>Omzet ${fm(r?.total||0)} · Winst ${fm(r?.profit||0)} · ROAS ${r?.roas!=null?r.roas.toLocaleString("nl-NL",{maximumFractionDigits:2}):"N.v.t."}</small></div>
+      <div class="grow"><b>${esc(p.title)}</b><small>Omzet ${fd(r?.total||0)} · Winst ${fd(r?.profit||0)} · ROAS ${r?.roas!=null?r.roas.toLocaleString("nl-NL",{maximumFractionDigits:2}):"N.v.t."}</small></div>
       ${nAds?`<span class="badge good">${nAds} gekoppeld</span>`:""}</label>`; }).join("");
   $("mapProducts").querySelectorAll("input").forEach(r => r.onchange = () => { st.selProduct = r.value; renderMapProducts(); updateAssign(); });
 }
@@ -850,14 +855,14 @@ function monthlyOf(e){ const a = n(e.amount); return e.frequency==="weekly" ? a*
 function renderExpenses(){
   const R = st.range, active = st.expenses.filter(e => e.status === "active");
   const mon = active.filter(e => e.recurring).reduce((s,e)=>s+monthlyOf(e),0);
-  $("e-month").textContent = fm(mon); $("e-year").textContent = fm(mon*12);
-  $("e-once").textContent = fm(active.filter(e => !e.recurring && inRange(e.startDate,R.from,R.to)).reduce((s,e)=>s+n(e.amount),0));
+  $("e-month").textContent = fd(mon); $("e-year").textContent = fd(mon*12);
+  $("e-once").textContent = fd(active.filter(e => !e.recurring && inRange(e.startDate,R.from,R.to)).reduce((s,e)=>s+n(e.amount),0));
   $("e-count").textContent = int.format(active.length);
   const cats = [...new Set(st.expenses.map(e => e.category))];
   const f = $("exFilter"), cur = f.value; f.innerHTML = `<option value="">Alle</option>` + cats.map(c => `<option>${esc(c)}</option>`).join(""); f.value = cur;
   const rows = st.expenses.filter(e => !f.value || e.category === f.value).sort((a,b) => (b.startDate||"").localeCompare(a.startDate||""));
   $("expTable").innerHTML = rows.length ? `<table><thead><tr><th>Naam</th><th>Categorie</th><th class="num">Bedrag</th><th>Frequentie</th><th>Startdatum</th><th>Status</th><th></th></tr></thead><tbody>${
-    rows.map(e => `<tr><td><b>${esc(e.name)}</b>${e.notes?`<br><small style="color:var(--dim)">${esc(e.notes)}</small>`:""}</td><td><span class="badge na">${esc(e.category)}</span></td><td class="num">${fm(n(e.amount))}</td>
+    rows.map(e => `<tr><td><b>${esc(e.name)}</b>${e.notes?`<br><small style="color:var(--dim)">${esc(e.notes)}</small>`:""}</td><td><span class="badge na">${esc(e.category)}</span></td><td class="num">${fd(n(e.amount))}</td>
       <td>${e.recurring ? FREQ[e.frequency]||"Maandelijks" : "Eenmalig"}</td><td>${e.startDate?new Date(e.startDate).toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}):""}</td>
       <td><span class="badge ${e.status==="active"?"good":"na"}">${e.status==="active"?"Actief":"Gepauzeerd"}</span></td>
       <td style="white-space:nowrap"><button class="btn ghost" type="button" data-edit="${esc(e.id)}" ${canWrite?"":"disabled"}>Bewerken</button> <button class="btn ghost" type="button" data-del="${esc(e.id)}" ${canWrite?"":"disabled"}>Verwijderen</button></td></tr>`).join("")}</tbody></table>`
@@ -870,7 +875,7 @@ function renderExpenses(){
 }
 function openExp(e){
   st.editExp = e?.id || null; $("expForm").hidden = false; $("expFormTitle").textContent = e ? "Kostenpost bewerken" : "Nieuwe kostenpost";
-  $("exName").value = e?.name || ""; $("exCat").value = e?.category || "Software & tools"; $("exAmt").value = e?.amount ?? "";
+  $("exName").value = e?.name || ""; $("exCat").value = e?.category || "Software & tools"; $("exAmt").value = toDisp(e?.amount);
   $("exStart").value = e?.startDate || today(); $("exRec").checked = !!e?.recurring; $("exFreq").disabled = !e?.recurring; $("exFreq").value = e?.frequency || "monthly";
   $("exStatus").value = e?.status || "active"; $("exNotes").value = e?.notes || ""; $("exName").focus();
 }
@@ -880,7 +885,7 @@ $("exRec").onchange = () => { $("exFreq").disabled = !$("exRec").checked; };
 $("exFilter").onchange = renderExpenses;
 $("expF").onsubmit = async ev => {
   ev.preventDefault();
-  const body = {name:$("exName").value.trim(), category:$("exCat").value, amount:n($("exAmt").value), startDate:$("exStart").value, recurring:$("exRec").checked, frequency:$("exRec").checked?$("exFreq").value:null, status:$("exStatus").value, notes:$("exNotes").value.trim(), updatedAt:Date.now()};
+  const body = {name:$("exName").value.trim(), category:$("exCat").value, amount:fromDisp($("exAmt").value), startDate:$("exStart").value, recurring:$("exRec").checked, frequency:$("exRec").checked?$("exFreq").value:null, status:$("exStatus").value, notes:$("exNotes").value.trim(), updatedAt:Date.now()};
   const ref = st.editExp ? db.collection("expenses").doc(st.editExp) : db.collection("expenses").doc();
   const ok = await write(() => ref.set(body), "Kostenpost opgeslagen");
   if (ok) $("expForm").hidden = true;
@@ -888,14 +893,14 @@ $("expF").onsubmit = async ev => {
 
 /* ---------- settings ---------- */
 const SFIELDS = {fx:"fx", feePct:"feePct", feeFix:"feeFix", goalRev:"goalRev", goalProfit:"goalProfit", roasHi:"roasHi", roasLo:"roasLo", profHi:"profHi", profLo:"profLo", fallbackPct:"fallbackPct", eurRate:"eurRate"};
-function fillSettings(){ for (const [k,id] of Object.entries(SFIELDS)) if (document.activeElement !== $(id)) $(id).value = st.settings[k]; renderConn(); }
+function fillSettings(){ for (const [k,id] of Object.entries(SFIELDS)) if (document.activeElement !== $(id)) $(id).value = MONEY_SETTINGS.includes(k) ? toDisp(st.settings[k]) : st.settings[k]; renderConn(); }
 function renderConn(){
   $("conn").innerHTML = `<dt>Shopify</dt><dd><i class="dot ${st.shopOk?"ok":"err"}"></i>ironvyofficial.com (GBP)</dd>
     <dt>Meta Ads</dt><dd><i class="dot ${st.metaState==="ok"?"ok":st.metaState==="loading"?"warn":"err"}"></i>${esc(st.metaAccount || "via Windsor.ai")}${st.adCurrency?` (${esc(st.adCurrency)})`:""}</dd>`;
   $("fxHint").textContent = st.adCurrency ? `1 ${st.adCurrency} = zoveel GBP${st.adCurrency==="GBP"?" (zelfde valuta: laat op 1)":""}` : "1 eenheid advertentievaluta = zoveel GBP";
 }
 async function saveSettings(keys, msg){
-  const body = {}; for (const k of keys) body[k] = n($(SFIELDS[k]).value);
+  const body = {}; for (const k of keys) body[k] = MONEY_SETTINGS.includes(k) ? fromDisp($(SFIELDS[k]).value) : n($(SFIELDS[k]).value);
   await write(() => db.doc("config/settings").set({...st.settings, ...body, updatedAt:Date.now()}), msg);
 }
 $("saveSettings").onclick = () => saveSettings(["fx","eurRate","goalRev","goalProfit","roasHi","roasLo","profHi","profLo"], "Instellingen opgeslagen");
@@ -921,7 +926,7 @@ async function write(fn, msg){
   }
 }
 function subscribe(){
-  db.doc("config/settings").onSnapshot(s => { st.settings = {...DEFAULTS, ...(s.exists ? s.data() : {})}; fillSettings(); renderAll(); renderCogs(); }, dbErr);
+  db.doc("config/settings").onSnapshot(s => { st.settings = {...DEFAULTS, ...(s.exists ? s.data() : {})}; fillSettings(); applyCcy(false); renderAll(); if (st.catalog.length) renderCogs(); }, dbErr);
   db.collection("cogs").onSnapshot(s => { st.cogs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderCogs(); renderAll(); renderMapProducts(); }, dbErr);
   db.collection("expenses").onSnapshot(s => { st.expenses = s.docs.map(d => ({id:d.id, ...d.data()})); renderAll(); }, dbErr);
   db.collection("mappings").onSnapshot(s => { st.mappings = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); renderAll(); renderMapProducts(); }, dbErr);
@@ -937,7 +942,6 @@ function route(){
   const name = ["dashboard","products","ads","expenses","ask","settings"].includes(v) ? v : "dashboard";
   document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "v-"+name);
   document.querySelectorAll(".side a").forEach(a => a.dataset.view === name ? a.setAttribute("aria-current","page") : a.removeAttribute("aria-current"));
-  $("ccyWrap").hidden = name !== "dashboard";
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange", route);
@@ -950,7 +954,14 @@ $("customRange").hidden = $("preset").value !== "custom";
 [$("dFrom"), $("dTo")].forEach(i => i.onchange = () => { if (mcp && $("dFrom").value && $("dTo").value) loadAll(); });
 $("prodFilter").onchange = renderDashboard;
 $("dispCcy").value = disp;
-$("dispCcy").onchange = () => { disp = $("dispCcy").value; try { localStorage.setItem("ivp-ccy", disp); } catch {} renderDashboard(); };
+function applyCcy(full){
+  document.querySelectorAll(".ccyLbl").forEach(el => el.textContent = disp);
+  const note = disp === "EUR" ? `Alle bedragen in euro, omgerekend tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}. Wat je invult wordt ook in euro gelezen.` : "";
+  $("eurNoteS").hidden = !note; $("eurNoteS").textContent = note;
+  if (full){ $("expForm").hidden = true; renderAll(); if (st.catalog.length){ renderCogs(); renderMapProducts(); } fillSettings(); }
+}
+$("dispCcy").onchange = () => { disp = $("dispCcy").value; try { localStorage.setItem("ivp-ccy", disp); } catch {} applyCcy(true); };
+applyCcy(false);
 $("pSearch").oninput = renderProducts;
 $("reload").onclick = async () => { if (!mcp) return; try { await mcp.invalidate(SHOP); } catch {} loadAll(); };
 $("cogsReload").onclick = async () => { try { await mcp.invalidate(SHOP, PRODUCTS); } catch {} loadCatalog(); };
@@ -979,6 +990,7 @@ async function setupAsk(){
     }];
     const prompt = `Je bent de e-commerce-analist van Ironvy (Shopify, GBP). Vandaag is ${today()}.
 Hieronder staat de winstdata die de app al berekend heeft (nettowinst = netto omzet − inkoop − ads − transactiekosten − vaste lasten). Gebruik de shopifyql-tool alleen als je extra Shopify-cijfers nodig hebt. Verzin nooit cijfers; zeg het als data ontbreekt (bijv. ontbrekende inkoopprijzen).
+Alle bedragen in DATA zijn GBP. ${disp==="EUR"?`De gebruiker kijkt in euro: noem bedragen in EUR, omgerekend tegen 1 GBP = ${rateNow()} EUR.`:""}
 Antwoord in het Nederlands: eerst de kernconclusie in 1–2 zinnen, dan de cijfers, dan maximaal 3 concrete acties.
 
 DATA:
