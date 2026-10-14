@@ -641,7 +641,8 @@ function shopTotals(from, to){
   return t;
 }
 /* digital products (e-books) are shipped by email: no shipping cost */
-const isDigital = id => !!st.cogs[id]?.noShipping;
+const isBonus = id => !!st.cogs[id]?.freeBonus;
+const isDigital = id => !!st.cogs[id]?.noShipping || isBonus(id);
 function shipFactor(){
   /* share of orders that contain a physical product; an order with only digital items costs no shipping */
   const tot = shopTotals(st.range.from, st.range.to).orders;
@@ -682,7 +683,13 @@ function productRows(){
   }
   for (const p of st.catalog) if (!byId.has(p.id) && (st.watch[p.id] || adSpendFor(R.from,R.to,p.id).spend > 0)) byId.set(p.id, {id:p.id, title:p.title, sku:p.sku, units:0,total:0,net:0,ret:0,orders:0});
   const shopTot = shopTotals(R.from, R.to);
-  return [...byId.values()].map(o => {
+  /* free bonus products (e.g. the e-book in the 2+1 / 3+2 bundles) earn nothing themselves:
+     any revenue Shopify allocated to them goes back to the paid products in the same period */
+  const rows = [...byId.values()], bonus = {total:0, net:0, ret:0};
+  for (const o of rows) if (isBonus(o.id)){ bonus.total += o.total; bonus.net += o.net; bonus.ret += o.ret; o.total = o.net = o.ret = 0; o.bonus = true; }
+  const paidNet = rows.filter(o => !o.bonus).reduce((a,o) => a + Math.max(o.net,0), 0);
+  if (paidNet > 0) for (const o of rows) if (!o.bonus){ const sh = Math.max(o.net,0)/paidNet; o.total += bonus.total*sh; o.net += bonus.net*sh; o.ret += bonus.ret*sh; }
+  return rows.map(o => {
     const cat = st.catalog.find(p => p.id === o.id);
     if (cat){ o.title = cat.title; o.img = cat.img; o.sku = o.sku || cat.sku; }
     const c = o.id !== "__unknown" ? rate(o.id) : null;
@@ -844,7 +851,7 @@ function tableHTML(rows, withPin){
   if (!rows.length) return `<p class="empty">Geen producten met verkopen of advertenties in deze periode.</p>`;
   return `<table><thead><tr>${withPin?'<th style="width:28px"></th>':""}${COLS.map(([k,l,num]) => `<th class="sort ${num?"num":""}" data-k="${k}">${l}${st.sort.key===k?(st.sort.dir<0?" ↓":" ↑"):""}</th>`).join("")}</tr></thead><tbody>${
     rows.map(r => `<tr>${withPin?`<td><button class="pin" type="button" data-pin="${esc(r.id)}" aria-pressed="${!!st.watch[r.id]}" aria-label="Vastpinnen" ${r.id==="__unknown"?"disabled":""}>📌</button></td>`:""}
-      <td><div class="pname">${r.img?`<img src="${esc(r.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(r.title)}</b><small>${esc(r.sku||"")}</small></div></div></td>
+      <td><div class="pname">${r.img?`<img src="${esc(r.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(r.title)}</b><small>${r.bonus ? '<span class="badge na">Gratis bonus</span>' : esc(r.sku||"")}</small></div></div></td>
       <td class="num">${int.format(r.units)}</td><td class="num">${fd(r.total)}</td><td class="num">${fd(r.net)}</td>
       <td class="num">${r.cogsMissing && r.id!=="__unknown" ? `<a href="#products" title="Inkoopprijs ontbreekt" style="color:var(--mid)">ontbreekt</a>` : fd(r.cogs)}</td>
       <td class="num">${fd(r.ad)}</td><td class="num">${fd(r.ret)}</td>
@@ -881,21 +888,26 @@ function renderCogs(){
     st.catalog.map(p => {
       const c = st.cogs[p.id] || {}, os = orderStats(p.id);
       const per = n(c.perOrder) || (os ? Math.max(1, Math.round(os.units*10)/10) : 1);
-      const digital = !!c.noShipping, shipEach = digital ? 0 : ship / per;
+      const bonusP = !!c.freeBonus, digital = !!c.noShipping || bonusP, shipEach = digital ? 0 : ship / per;
       const unitCost = c.unitCost != null ? n(c.unitCost) + n(c.shipping) + shipEach : null;
-      const margin = unitCost != null ? p.price - unitCost : null;
+      const margin = unitCost != null ? (bonusP ? 0 : p.price) - unitCost : null;
       const orderCost = unitCost != null ? per*(n(c.unitCost) + n(c.shipping)) + (digital ? 0 : ship) : null;
-      const orderLine = os && orderCost != null ? `<br><small style="color:var(--muted)">Per bestelling: omzet ${fd(os.net)} − kosten ${fd(orderCost)} = <b style="color:var(--${os.net-orderCost<0?"bad":"good"})">${fd(os.net - orderCost)}</b></small>` : "";
+      const orderLine = !bonusP && os && orderCost != null ? `<br><small style="color:var(--muted)">Per bestelling: omzet ${fd(os.net)} − kosten ${fd(orderCost)} = <b style="color:var(--${os.net-orderCost<0?"bad":"good"})">${fd(os.net - orderCost)}</b></small>` : "";
       return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
-      <td class="num">${fd(p.price)}</td>
+      <td class="num">${bonusP ? `<span class="badge good">Gratis</span><br><small style="color:var(--dim)">bij bundel, niet los te koop<br>(Shopify-prijs ${fd(p.price)})</small>` : fd(p.price)}<br><label style="display:inline-flex;gap:5px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:4px;cursor:pointer"><input type="checkbox" data-bonus="${esc(p.id)}" ${bonusP?"checked":""} ${canWrite?"":"disabled"}> Gratis bonus</label></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="perOrder" type="number" min="1" step="1" value="${c.perOrder ?? ""}" placeholder="${os ? (Math.round(os.units*10)/10).toLocaleString("nl-NL") : "1"}" aria-label="Stuks per bestelling ${esc(p.title)}" style="width:70px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"><br><small style="color:var(--dim)">${c.perOrder ? "zelf ingesteld" : os ? "gemiddelde uit verkopen" : "geen verkopen"}</small></td>
       <td class="num">${digital ? `<span class="badge na">Geen</span>` : fd(shipEach)}<br><small style="color:var(--dim)">${digital ? "digitaal product" : ship ? `${fd(ship)} ÷ ${per.toLocaleString("nl-NL")}` : `<a href="#expenses">instellen</a>`}</small><br><label style="display:inline-flex;gap:5px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:4px;cursor:pointer"><input type="checkbox" data-noship="${esc(p.id)}" ${digital?"checked":""} ${canWrite?"":"disabled"}> Digitaal, geen verzending</label></td>
-      <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${margin<0?"bad":"good"})">${fd(margin)}</b> <span style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}${orderLine}</td>
+      <td class="num">${bonusP ? `<span class="badge na">Levert niets op</span><br><small style="color:var(--dim)">geen omzet, geen kosten</small>` : margin==null?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${margin<0?"bad":"good"})">${fd(margin)}</b> <span style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}${orderLine}</td>
       <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>
     <p class="note" style="margin-top:10px">Marge per stuk = verkoopprijs − inkoop − extra kosten − jouw deel van de verzending (verzendkosten per bestelling gedeeld door het aantal stuks in een bestelling). De regel <i>per bestelling</i> gebruikt wat klanten echt betaalden, dus inclusief kortingen en gratis producten zoals bij 2+1.</p>`;
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
+  document.querySelectorAll("[data-bonus]").forEach(cb => cb.onchange = () => {
+    const id = cb.dataset.bonus, prev = st.cogs[id] || {}, p = st.catalog.find(x => x.id === id);
+    const extra = cb.checked ? {unitCost: prev.unitCost ?? 0, shipping: prev.shipping ?? 0, noShipping:true} : {};
+    write(() => db.collection(colName("cogs")).doc(id).set({...prev, ...extra, title:p?.title||prev.title||"", freeBonus:cb.checked, updatedAt:Date.now()}), cb.checked ? "Gemarkeerd als gratis bonus" : "Geen gratis bonus meer");
+  });
   document.querySelectorAll("[data-noship]").forEach(cb => cb.onchange = () => {
     const id = cb.dataset.noship, prev = st.cogs[id] || {}, p = st.catalog.find(x => x.id === id);
     write(() => db.collection(colName("cogs")).doc(id).set({...prev, title:p?.title||prev.title||"", noShipping:cb.checked, updatedAt:Date.now()}), cb.checked ? "Geen verzendkosten voor dit product" : "Verzendkosten weer aan");
@@ -904,7 +916,7 @@ function renderCogs(){
 async function saveCogs(id){
   const get = f => document.querySelector(`.cogsIn[data-id="${CSS.escape(id)}"][data-f="${f}"]`).value;
   const p = st.catalog.find(x => x.id === id);
-  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), perOrder: get("perOrder")===""?null:Math.max(1, n(get("perOrder"))), noShipping: !!st.cogs[id]?.noShipping, updatedAt:Date.now()};
+  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), perOrder: get("perOrder")===""?null:Math.max(1, n(get("perOrder"))), noShipping: !!st.cogs[id]?.noShipping, freeBonus: !!st.cogs[id]?.freeBonus, updatedAt:Date.now()};
   if (body.unitCost == null){ toast("Vul een inkoopprijs in."); return; }
   await write(() => db.collection(colName("cogs")).doc(id).set(body), "Inkoopprijs opgeslagen");
 }
