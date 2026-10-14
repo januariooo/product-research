@@ -141,6 +141,9 @@ tr:last-child td{border-bottom:0}
 .trace{font:11.5px var(--f-num);color:var(--muted);margin-top:6px}
 .toast{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:20}
 .skel{color:var(--dim)}
+.offerseg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--panel2)}
+.offerseg button{border:0;background:none;padding:7px 12px;font-weight:600;font-size:12.5px;color:var(--muted)}
+.offerseg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
 #testWrap input{accent-color:var(--mid);margin:0}
 @media (max-width:720px){
@@ -246,6 +249,7 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
       <div><h1>Producten & inkoop</h1><p class="sub">Vul per product je inkoopprijs per stuk in. Zonder inkoopprijs kan de nettowinst niet kloppen. Verzendkosten per bestelling stel je in bij <a href="#expenses">Kosten</a>.</p></div>
       <div class="card">
         <div class="cardhead"><div><h2>Inkoopkosten per product</h2><p class="sub" id="cogsSub">Wordt direct opgeslagen voor iedereen met toegang</p></div><button class="btn" type="button" id="cogsReload">Producten verversen</button></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px"><span class="note">Marge bekijken bij:</span><div class="offerseg" id="offerSeg" role="group" aria-label="Aanbieding voor marge"></div></div>
         <div class="tscroll" id="cogsTable"><p class="note skel">Producten laden…</p></div>
       </div>
       <div class="card">
@@ -883,6 +887,15 @@ function renderProducts(){
 const DEFAULT_OFFERS = [{name:"Buy One", price:34.99, units:1}, {name:"Buy 2 Get 1 FREE", price:69.98, units:3}, {name:"Buy 3 Get 2 FREE", price:104.97, units:5}];
 const offersOf = (id, p) => { const o = st.cogs[id]?.offers; return Array.isArray(o) && o.length ? o : (p ? [{name:"1 stuk", price:p.price, units:1}] : []); };
 let offerEdit = null;
+let offerSel = 0;
+try { offerSel = Math.max(0, parseInt(localStorage.getItem("ivp-offer")) || 0); } catch {}
+function renderOfferSeg(){
+  const ref = st.catalog.find(p => !st.cogs[p.id]?.freeBonus);
+  const names = ref ? offersOf(ref.id, ref).map(o => o.name) : [];
+  if (offerSel >= names.length) offerSel = 0;
+  $("offerSeg").innerHTML = names.map((nm,i) => `<button type="button" data-osel="${i}" aria-pressed="${i===offerSel}">${esc(nm)}</button>`).join("");
+  $("offerSeg").querySelectorAll("[data-osel]").forEach(b => b.onclick = () => { offerSel = +b.dataset.osel; try { localStorage.setItem("ivp-offer", String(offerSel)); } catch {} renderCogs(); });
+}
 function offerCalc(c, o){
   const units = Math.max(1, n(o.units)), price = n(o.price), digital = !!c.noShipping;
   const goods = units * (n(c.unitCost) + n(c.shipping));
@@ -896,18 +909,19 @@ function renderCogs(){
   const ship = n(st.settings.shipPerOrder);
   const inStyle = "width:90px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right";
   const chk = (attr, id, on, label) => `<label style="display:inline-flex;gap:5px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:4px;cursor:pointer"><input type="checkbox" ${attr}="${esc(id)}" ${on?"checked":""} ${canWrite?"":"disabled"}> ${label}</label>`;
-  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Extra kosten / stuk<br><small style="font-weight:400;color:var(--dim)">bijv. verpakking</small></th><th class="num">Verzending</th><th class="num">Marge bij 1 stuk</th><th></th></tr></thead><tbody>${
+  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Extra kosten / stuk<br><small style="font-weight:400;color:var(--dim)">bijv. verpakking</small></th><th class="num">Verzending</th><th class="num">Marge bij aanbieding</th><th></th></tr></thead><tbody>${
     st.catalog.map(p => {
       const c = st.cogs[p.id] || {}, bonusP = !!c.freeBonus, digital = !!c.noShipping || bonusP;
-      const margin = c.unitCost != null ? (bonusP ? 0 : p.price) - n(c.unitCost) - n(c.shipping) - (digital ? 0 : ship) : null;
+      const offs = offersOf(p.id, p), off = offs[Math.min(offerSel, offs.length-1)];
+      const oc = c.unitCost != null && off ? offerCalc({...c, noShipping:digital}, off) : null;
       return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
       <td class="num">${bonusP ? `<span class="badge good">Gratis</span><br><small style="color:var(--dim)">bij bundel, niet los te koop<br>(Shopify-prijs ${fd(p.price)})</small>` : fd(p.price)}<br>${chk("data-bonus", p.id, bonusP, "Gratis bonus")}</td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num">${digital ? `<span class="badge na">Geen</span>` : ship ? `${fd(ship)}<br><small style="color:var(--dim)">per bestelling</small>` : `<a href="#expenses">instellen</a>`}<br>${chk("data-noship", p.id, digital, "Digitaal, geen verzending")}</td>
-      <td class="num">${bonusP ? `<span class="badge na">Levert niets op</span><br><small style="color:var(--dim)">geen omzet, geen kosten</small>` : margin==null?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${margin<0?"bad":"good"})">${fd(margin)}</b> <span style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span><br><small style="color:var(--dim)">1 stuk + verzending</small>`}</td>
+      <td class="num">${bonusP ? `<span class="badge na">Levert niets op</span><br><small style="color:var(--dim)">geen omzet, geen kosten</small>` : !oc?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${oc.left<0?"bad":"good"})">${fd(oc.left)}</b> <span style="color:var(--muted)">(${Math.round(oc.pct*100)}%)</span><br><small style="color:var(--dim)">${esc(off.name)}: ${fd(oc.price)} voor ${oc.units} stuk${oc.units>1?"s":""}${oc.units>1?` · ${fd(oc.perUnit)} per stuk`:""}</small>`}</td>
       <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>`;
-  renderOffers();
+  renderOfferSeg(); renderOffers();
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
   document.querySelectorAll("[data-bonus]").forEach(cb => cb.onchange = () => {
     const id = cb.dataset.bonus, prev = st.cogs[id] || {}, p = st.catalog.find(x => x.id === id);
@@ -935,8 +949,8 @@ function renderOffers(){
     }
     if (c.unitCost == null) return head + `<p class="note">Vul eerst de inkoopprijs van dit product in, dan zie je hier de marge per aanbieding.</p>`;
     return head + `<table><thead><tr><th>Aanbieding</th><th class="num">Klant betaalt</th><th class="num">Stuks</th><th class="num">Inkoop</th><th class="num">Verzending</th><th class="num">Transactiekosten</th><th class="num">Over per bestelling</th><th class="num">Per stuk</th><th class="num">Marge</th></tr></thead><tbody>${
-      offers.map(o => { const r = offerCalc(c, o); const cls = r.left < 0 ? "bad" : (r.pct*100 >= n(st.settings.profHi) ? "good" : r.pct*100 <= n(st.settings.profLo) ? "bad" : "mid");
-        return `<tr><td><b>${esc(o.name)}</b>${r.units > 1 ? `<br><small style="color:var(--dim)">${r.units} stuks, ${fd(r.price/r.units)} per stuk betaald</small>` : ""}</td>
+      offers.map((o,oi) => { const r = offerCalc(c, o); const cls = r.left < 0 ? "bad" : (r.pct*100 >= n(st.settings.profHi) ? "good" : r.pct*100 <= n(st.settings.profLo) ? "bad" : "mid");
+        return `<tr${oi===offerSel?' style="background:var(--accent-soft)"':''}><td><b>${esc(o.name)}</b>${r.units > 1 ? `<br><small style="color:var(--dim)">${r.units} stuks, ${fd(r.price/r.units)} per stuk betaald</small>` : ""}</td>
         <td class="num">${fd(r.price)}</td><td class="num">${r.units}</td><td class="num">−${fd(r.goods)}</td><td class="num">−${fd(r.ship)}</td><td class="num">−${fd(r.fees)}</td>
         <td class="num"><b style="color:var(--${r.left<0?"bad":"good"})">${fd(r.left)}</b></td><td class="num">${fd(r.perUnit)}</td><td class="num"><span class="badge ${cls}">${Math.round(r.pct*100)}%</span></td></tr>`; }).join("")}</tbody></table>`;
   }).join("") + `<p class="note" style="margin-top:12px">Over per bestelling = wat de klant betaalt − inkoop van alle stuks in het pakket − verzending (één keer per pakket) − transactiekosten. Advertentiekosten en vaste lasten zitten er nog niet in; die zie je op het dashboard. Gratis bonussen zoals het e-book kosten niets en tellen hier niet mee.</p>`;
