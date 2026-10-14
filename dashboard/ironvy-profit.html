@@ -1,3 +1,4 @@
+
 <title>Ironvy Profit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -181,7 +182,7 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
       <label class="chipsel">Product
         <select id="prodFilter" aria-label="Product"><option value="">Alle producten</option></select>
       </label>
-      <label class="chipsel" id="ccyWrap">Valuta <select id="dispCcy" aria-label="Valuta"><option value="GBP">£ GBP</option><option value="EUR">€ EUR</option></select></label>
+      <label class="chipsel" id="ccyWrap">Valuta <select id="dispCcy" aria-label="Valuta"><option value="GBP">£ GBP</option><option value="EUR">€ EUR</option><option value="USD">$ USD</option></select></label>
       <label class="chipsel" id="testWrap" title="Verzonnen verkopen en ads, los van je echte data"><input type="checkbox" id="testMode"> Testmodus</label>
       <div class="grow"></div>
       <div class="status" id="status"><span><i class="dot" id="dShop"></i>Shopify</span><span><i class="dot" id="dMeta"></i>Meta</span><span id="stamp"></span></div>
@@ -347,6 +348,7 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
           <h2>Valuta</h2>
           <div class="form" style="margin-top:12px">
             <div class="field full"><label for="eurRate">Koers GBP → EUR (voor de euro-weergave)</label><input id="eurRate" type="number" min="0" step="0.0001"><small id="eurRateInfo">1 GBP = zoveel EUR. Wordt elke ochtend automatisch bijgewerkt; je kunt hem ook zelf aanpassen.</small></div>
+            <div class="field full"><label for="usdRate">Koers GBP → USD (voor de dollar-weergave)</label><input id="usdRate" type="number" min="0" step="0.0001"><small id="usdRateInfo">1 GBP = zoveel USD. Wordt elke ochtend automatisch bijgewerkt; je kunt hem ook zelf aanpassen.</small></div>
             <div class="field full"><label for="fx">Wisselkoers Meta-valuta → GBP</label><input id="fx" type="number" min="0" step="0.0001"><small id="fxHint">1 eenheid advertentievaluta = zoveel GBP</small></div>
           </div>
         </div>
@@ -399,13 +401,17 @@ const int = new Intl.NumberFormat("nl-NL");
 const fm = v => money.format(v || 0);
 /* dashboard-only display currency: amounts stay GBP internally and are converted when shown */
 let disp = "GBP";
-try { if (localStorage.getItem("ivp-ccy") === "EUR") disp = "EUR"; } catch {}
-const fmtD = {GBP:[money, money0], EUR:[new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"}), new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR",maximumFractionDigits:0})]};
-const conv = v => (v || 0) * (disp === "EUR" ? (parseFloat(st.settings.eurRate) || 1.17) : 1);
+try { const c = localStorage.getItem("ivp-ccy"); if (c === "EUR" || c === "USD") disp = c; } catch {}
+const mkF = c => [new Intl.NumberFormat("nl-NL",{style:"currency",currency:c}), new Intl.NumberFormat("nl-NL",{style:"currency",currency:c,maximumFractionDigits:0})];
+const fmtD = {GBP:[money, money0], EUR:mkF("EUR"), USD:mkF("USD")};
+const CCY = {EUR:{key:"eurRate", dateKey:"eurRateDate", def:1.17, sym:"€", word:"euro"}, USD:{key:"usdRate", dateKey:"usdRateDate", def:1.33, sym:"$", word:"dollar"}};
+const rateOf = c => CCY[c] ? (parseFloat(st.settings[CCY[c].key]) || CCY[c].def) : 1;
+/* inputs: shown in the chosen currency, stored in GBP */
+const rateNow = () => rateOf(disp);
+const conv = v => (v || 0) * rateNow();
 const fd = v => fmtD[disp][0].format(conv(v));
 const fd0 = v => fmtD[disp][1].format(conv(v));
-/* inputs: shown in the chosen currency, stored in GBP */
-const rateNow = () => disp === "EUR" ? (parseFloat(st.settings.eurRate) || 1.17) : 1;
+const rateDateTxt = c => st.settings[CCY[c].dateKey] ? new Date(st.settings[CCY[c].dateKey]).toLocaleDateString("nl-NL",{day:"numeric",month:"long"}) : "";
 const toDisp = v => v == null || v === "" ? "" : +(n(v) * rateNow()).toFixed(2);
 const fromDisp = v => n(v) / rateNow();
 const MONEY_SETTINGS = ["feeFix","goalRev","goalProfit","shipPerOrder"];
@@ -416,7 +422,7 @@ const daysBetween = (a, b) => Math.round((new Date(b+"T00:00:00Z") - new Date(a+
 const today = () => dstr(new Date());
 
 /* ---------- state ---------- */
-const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0, eurRate:1.17, shipPerOrder:0};
+const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0, eurRate:1.17, usdRate:1.33, shipPerOrder:0};
 const st = {
   settings:{...DEFAULTS}, cogs:{}, expenses:[], mappings:{}, watch:{},
   range:{from:null,to:null,prevFrom:null,prevTo:null},
@@ -705,6 +711,7 @@ function chg(el, cur, prev, invert){
 }
 function renderAll(){
   renderDashboard(); renderAdsList(); renderExpenses(); renderMetaWarn();
+  if (st.catalog.length && !document.activeElement?.classList?.contains("cogsIn")) renderCogs();
 }
 function renderMetaWarn(){
   const w = $("adsWarn");
@@ -726,8 +733,8 @@ function renderDashboard(){
     cur = periodCalc(R.from, R.to, cr.ratio);
     prev = periodCalc(R.prevFrom, R.prevTo, cr.ratio);
   }
-  $("eurNote").hidden = disp !== "EUR";
-  $("eurNote").textContent = `Bedragen omgerekend naar euro tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}. Koers${st.settings.eurRateDate ? " van "+new Date(st.settings.eurRateDate).toLocaleDateString("nl-NL",{day:"numeric",month:"long"}) : ""}, wordt dagelijks bijgewerkt.`;
+  $("eurNote").hidden = disp === "GBP";
+  if (disp !== "GBP"){ const c = CCY[disp], dt = rateDateTxt(disp); $("eurNote").textContent = `Bedragen omgerekend naar ${c.word} tegen 1 £ = ${c.sym} ${rateNow().toLocaleString("nl-NL",{maximumFractionDigits:4})}. Koers${dt ? " van "+dt : ""}, wordt dagelijks bijgewerkt.`; }
   $("t-sales").textContent = fd(cur.total); $("t-ad").textContent = fd(cur.ad); $("t-cogs").textContent = fd(cur.cogs);
   $("t-ret").textContent = fd(cur.ret); $("t-profit").textContent = fd(cur.profit);
   $("tileProfit").classList.toggle("neg", cur.profit < 0);
@@ -850,22 +857,40 @@ function renderProducts(){
 }
 
 /* ---------- COGS page ---------- */
+function orderStats(id){
+  /* average units and net revenue per order for this product in the selected period */
+  const r = st.shopProducts.find(x => String(x.product_id||"") === id);
+  const orders = r ? n(r.orders) : 0;
+  return orders ? {units: n(r.net_items_sold)/orders, net: n(r.net_sales)/orders, orders} : null;
+}
 function renderCogs(){
   if (!st.catalog.length){ $("cogsTable").innerHTML = `<p class="empty">Geen producten gevonden in Shopify.</p>`; return; }
-  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Extra kosten / stuk<br><small style="font-weight:400;color:var(--dim)">bijv. verpakking</small></th><th class="num">Marge per stuk</th><th></th></tr></thead><tbody>${
-    st.catalog.map(p => { const c = st.cogs[p.id] || {}; const margin = c.unitCost != null ? p.price - n(c.unitCost) - n(c.shipping) : null;
+  const ship = n(st.settings.shipPerOrder);
+  const inStyle = "width:90px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right";
+  $("cogsTable").innerHTML = `<table><thead><tr><th>Product</th><th class="num">Verkoopprijs</th><th class="num">Inkoopprijs / stuk</th><th class="num">Extra kosten / stuk<br><small style="font-weight:400;color:var(--dim)">bijv. verpakking</small></th><th class="num">Stuks per bestelling</th><th class="num">Verzending / stuk</th><th class="num">Marge per stuk</th><th></th></tr></thead><tbody>${
+    st.catalog.map(p => {
+      const c = st.cogs[p.id] || {}, os = orderStats(p.id);
+      const per = n(c.perOrder) || (os ? Math.max(1, Math.round(os.units*10)/10) : 1);
+      const shipEach = ship / per;
+      const unitCost = c.unitCost != null ? n(c.unitCost) + n(c.shipping) + shipEach : null;
+      const margin = unitCost != null ? p.price - unitCost : null;
+      const orderCost = unitCost != null ? per*(n(c.unitCost) + n(c.shipping)) + ship : null;
+      const orderLine = os && orderCost != null ? `<br><small style="color:var(--muted)">Per bestelling: omzet ${fd(os.net)} − kosten ${fd(orderCost)} = <b style="color:var(--${os.net-orderCost<0?"bad":"good"})">${fd(os.net - orderCost)}</b></small>` : "";
       return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
       <td class="num">${fd(p.price)}</td>
-      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
-      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="width:100px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"></td>
-      <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`${fd(margin)} <span class="drop" style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}</td>
-      <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>`;
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="${inStyle}"></td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="${inStyle}"></td>
+      <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="perOrder" type="number" min="1" step="1" value="${c.perOrder ?? ""}" placeholder="${os ? (Math.round(os.units*10)/10).toLocaleString("nl-NL") : "1"}" aria-label="Stuks per bestelling ${esc(p.title)}" style="width:70px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"><br><small style="color:var(--dim)">${c.perOrder ? "zelf ingesteld" : os ? "gemiddelde uit verkopen" : "geen verkopen"}</small></td>
+      <td class="num">${fd(shipEach)}<br><small style="color:var(--dim)">${ship ? `${fd(ship)} ÷ ${per.toLocaleString("nl-NL")}` : `<a href="#expenses">instellen</a>`}</small></td>
+      <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${margin<0?"bad":"good"})">${fd(margin)}</b> <span style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}${orderLine}</td>
+      <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>
+    <p class="note" style="margin-top:10px">Marge per stuk = verkoopprijs − inkoop − extra kosten − jouw deel van de verzending (verzendkosten per bestelling gedeeld door het aantal stuks in een bestelling). De regel <i>per bestelling</i> gebruikt wat klanten echt betaalden, dus inclusief kortingen en gratis producten zoals bij 2+1.</p>`;
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
 }
 async function saveCogs(id){
   const get = f => document.querySelector(`.cogsIn[data-id="${CSS.escape(id)}"][data-f="${f}"]`).value;
   const p = st.catalog.find(x => x.id === id);
-  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), updatedAt:Date.now()};
+  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), perOrder: get("perOrder")===""?null:Math.max(1, n(get("perOrder"))), updatedAt:Date.now()};
   if (body.unitCost == null){ toast("Vul een inkoopprijs in."); return; }
   await write(() => db.collection(colName("cogs")).doc(id).set(body), "Inkoopprijs opgeslagen");
 }
@@ -963,7 +988,7 @@ $("expF").onsubmit = async ev => {
 };
 
 /* ---------- settings ---------- */
-const SFIELDS = {fx:"fx", feePct:"feePct", feeFix:"feeFix", goalRev:"goalRev", goalProfit:"goalProfit", roasHi:"roasHi", roasLo:"roasLo", profHi:"profHi", profLo:"profLo", fallbackPct:"fallbackPct", eurRate:"eurRate", shipPerOrder:"shipPerOrder"};
+const SFIELDS = {fx:"fx", feePct:"feePct", feeFix:"feeFix", goalRev:"goalRev", goalProfit:"goalProfit", roasHi:"roasHi", roasLo:"roasLo", profHi:"profHi", profLo:"profLo", fallbackPct:"fallbackPct", eurRate:"eurRate", usdRate:"usdRate", shipPerOrder:"shipPerOrder"};
 function fillSettings(){ for (const [k,id] of Object.entries(SFIELDS)) if (document.activeElement !== $(id)) $(id).value = MONEY_SETTINGS.includes(k) ? toDisp(st.settings[k]) : st.settings[k]; renderConn(); }
 function renderConn(){
   $("conn").innerHTML = `<dt>Shopify</dt><dd><i class="dot ${st.shopOk?"ok":"err"}"></i>ironvyofficial.com (GBP)</dd>
@@ -974,7 +999,7 @@ async function saveSettings(keys, msg){
   const body = {}; for (const k of keys) body[k] = MONEY_SETTINGS.includes(k) ? fromDisp($(SFIELDS[k]).value) : n($(SFIELDS[k]).value);
   await write(() => db.doc(settingsPath()).set({...(TEST ? (st.testSettings||{}) : (st.realSettings||{})), ...body, updatedAt:Date.now()}), msg);
 }
-$("saveSettings").onclick = () => saveSettings(["fx","eurRate","goalRev","goalProfit","roasHi","roasLo","profHi","profLo"], "Instellingen opgeslagen");
+$("saveSettings").onclick = () => saveSettings(["fx","eurRate","usdRate","goalRev","goalProfit","roasHi","roasLo","profHi","profLo"], "Instellingen opgeslagen");
 $("saveFees").onclick = () => saveSettings(["feePct","feeFix"], "Transactiekosten opgeslagen");
 $("saveShip").onclick = () => saveSettings(["shipPerOrder"], "Verzendkosten opgeslagen");
 $("saveFallback").onclick = () => saveSettings(["fallbackPct"], "Opgeslagen");
@@ -1000,7 +1025,7 @@ async function write(fn, msg){
 let unsubs = [];
 function mergeSettings(){
   const real = st.realSettings || {};
-  st.settings = TEST ? {...DEFAULTS, ...(st.testSettings||{}), eurRate:real.eurRate ?? DEFAULTS.eurRate, eurRateDate:real.eurRateDate} : {...DEFAULTS, ...real};
+  st.settings = TEST ? {...DEFAULTS, ...(st.testSettings||{}), eurRate:real.eurRate ?? DEFAULTS.eurRate, eurRateDate:real.eurRateDate, usdRate:real.usdRate ?? DEFAULTS.usdRate, usdRateDate:real.usdRateDate} : {...DEFAULTS, ...real};
   fillSettings(); applyCcy(false); if (TEST && st.range.from) genTest(); renderAll(); if (st.catalog.length) renderCogs();
 }
 function subscribe(){
@@ -1037,9 +1062,9 @@ $("prodFilter").onchange = renderDashboard;
 $("dispCcy").value = disp;
 function applyCcy(full){
   document.querySelectorAll(".ccyLbl").forEach(el => el.textContent = disp);
-  const upd = st.settings.eurRateDate ? ` (koers van ${new Date(st.settings.eurRateDate).toLocaleDateString("nl-NL",{day:"numeric",month:"long"})})` : "";
-  $("eurRateInfo").textContent = `1 GBP = zoveel EUR. Wordt elke ochtend automatisch bijgewerkt${upd ? ", laatst"+upd : ""}; je kunt hem ook zelf aanpassen.`;
-  const note = disp === "EUR" ? `Alle bedragen in euro, omgerekend tegen 1 £ = € ${(parseFloat(st.settings.eurRate)||1.17).toLocaleString("nl-NL",{maximumFractionDigits:4})}${upd}. Wat je invult wordt ook in euro gelezen.` : "";
+  for (const c of ["EUR","USD"]){ const dt = rateDateTxt(c); $(c.toLowerCase()+"RateInfo").textContent = `1 GBP = zoveel ${c}. Wordt elke ochtend automatisch bijgewerkt${dt ? ", laatst (koers van "+dt+")" : ""}; je kunt hem ook zelf aanpassen.`; }
+  const dtd = disp !== "GBP" ? rateDateTxt(disp) : "";
+  const note = disp !== "GBP" ? `Alle bedragen in ${CCY[disp].word}, omgerekend tegen 1 £ = ${CCY[disp].sym} ${rateNow().toLocaleString("nl-NL",{maximumFractionDigits:4})}${dtd ? " (koers van "+dtd+")" : ""}. Wat je invult wordt ook in ${CCY[disp].word} gelezen.` : "";
   $("eurNoteS").hidden = !note; $("eurNoteS").textContent = note;
   if (full){ $("expForm").hidden = true; renderAll(); if (st.catalog.length){ renderCogs(); renderMapProducts(); } fillSettings(); }
 }
@@ -1073,7 +1098,7 @@ async function setupAsk(){
     }];
     const prompt = `Je bent de e-commerce-analist van Ironvy (Shopify, GBP). Vandaag is ${today()}.${TEST ? "\nLET OP: de app staat in TESTMODUS. Alle cijfers hieronder zijn verzonnen testdata; zeg dat er kort bij. Er is geen Shopify-tool beschikbaar." : ""}
 Hieronder staat de winstdata die de app al berekend heeft (nettowinst = netto omzet − inkoop − ads − transactiekosten − verzendkosten per bestelling − vaste lasten). Gebruik de shopifyql-tool alleen als je extra Shopify-cijfers nodig hebt. Verzin nooit cijfers; zeg het als data ontbreekt (bijv. ontbrekende inkoopprijzen).
-Alle bedragen in DATA zijn GBP. ${disp==="EUR"?`De gebruiker kijkt in euro: noem bedragen in EUR, omgerekend tegen 1 GBP = ${rateNow()} EUR.`:""}
+Alle bedragen in DATA zijn GBP. ${disp!=="GBP"?`De gebruiker kijkt in ${disp}: noem bedragen in ${disp}, omgerekend tegen 1 GBP = ${rateNow()} ${disp}.`:""}
 Antwoord in het Nederlands: eerst de kernconclusie in 1–2 zinnen, dan de cijfers, dan maximaal 3 concrete acties.
 
 DATA:
@@ -1109,3 +1134,4 @@ $("testMode").checked = TEST; $("testBanner").hidden = !TEST; document.body.clas
 })();
 })();
 </script>
+
