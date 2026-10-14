@@ -249,12 +249,14 @@ body.testing .top{box-shadow:inset 0 -2px 0 var(--mid)}
       <div><h1>Producten & inkoop</h1><p class="sub">Vul per product je inkoopprijs per stuk in. Zonder inkoopprijs kan de nettowinst niet kloppen. Verzendkosten per bestelling stel je in bij <a href="#expenses">Kosten</a>.</p></div>
       <div class="card">
         <div class="cardhead"><div><h2>Inkoopkosten per product</h2><p class="sub" id="cogsSub">Wordt direct opgeslagen voor iedereen met toegang</p></div><button class="btn" type="button" id="cogsReload">Producten verversen</button></div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px"><span class="note">Marge bekijken bij:</span><div class="offerseg" id="offerSeg" role="group" aria-label="Aanbieding voor marge"></div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px"><span class="note">Marge bekijken bij:</span><div class="offerseg" id="offerSeg" role="group" aria-label="Aanbieding voor marge"></div>
+          <label class="chipsel" style="cursor:pointer"><input type="checkbox" id="subOn" style="accent-color:var(--accent);margin:0"> Abonnement</label>
+          <span class="inl" id="subPctWrap" hidden><input id="subPct" type="number" min="0" max="100" step="1" aria-label="Abonnementskorting in procent" style="width:64px"><span class="note">% korting</span></span></div>
         <div class="tscroll" id="cogsTable"><p class="note skel">Producten laden…</p></div>
       </div>
       <div class="card">
         <h2>Marge per aanbieding</h2>
-        <p class="sub">Zoals je aanbiedingen in de winkel staan: wat de klant betaalt en hoeveel stuks er in één pakket gaan.</p>
+        <p class="sub" id="offersSub">Zoals je aanbiedingen in de winkel staan: wat de klant betaalt en hoeveel stuks er in één pakket gaan.</p>
         <div class="tscroll" id="offersBox"><p class="note skel">Laden…</p></div>
       </div>
       <div class="card">
@@ -431,7 +433,7 @@ const daysBetween = (a, b) => Math.round((new Date(b+"T00:00:00Z") - new Date(a+
 const today = () => dstr(new Date());
 
 /* ---------- state ---------- */
-const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0, eurRate:1.17, usdRate:1.33, shipPerOrder:0};
+const DEFAULTS = {fx:1, feePct:2, feeFix:0.25, goalRev:1000, goalProfit:0, roasHi:2.8, roasLo:1.7, profHi:30, profLo:5, fallbackPct:0, subPct:20, eurRate:1.17, usdRate:1.33, shipPerOrder:0};
 const st = {
   settings:{...DEFAULTS}, cogs:{}, expenses:[], mappings:{}, watch:{},
   range:{from:null,to:null,prevFrom:null,prevTo:null},
@@ -887,9 +889,13 @@ function renderProducts(){
 const DEFAULT_OFFERS = [{name:"Buy One", price:34.99, units:1}, {name:"Buy 2 Get 1 FREE", price:69.98, units:3}, {name:"Buy 3 Get 2 FREE", price:104.97, units:5}];
 const offersOf = (id, p) => { const o = st.cogs[id]?.offers; return Array.isArray(o) && o.length ? o : (p ? [{name:"1 stuk", price:p.price, units:1}] : []); };
 let offerEdit = null;
-let offerSel = 0;
+let offerSel = 0, subOn = false;
+try { subOn = localStorage.getItem("ivp-sub") === "1"; } catch {}
+const subFactor = () => subOn ? Math.max(0, 1 - n(st.settings.subPct ?? 20)/100) : 1;
 try { offerSel = Math.max(0, parseInt(localStorage.getItem("ivp-offer")) || 0); } catch {}
 function renderOfferSeg(){
+  $("subOn").checked = subOn; $("subPctWrap").hidden = !subOn;
+  if (document.activeElement !== $("subPct")) $("subPct").value = n(st.settings.subPct ?? 20);
   const ref = st.catalog.find(p => !st.cogs[p.id]?.freeBonus);
   const names = ref ? offersOf(ref.id, ref).map(o => o.name) : [];
   if (offerSel >= names.length) offerSel = 0;
@@ -897,7 +903,7 @@ function renderOfferSeg(){
   $("offerSeg").querySelectorAll("[data-osel]").forEach(b => b.onclick = () => { offerSel = +b.dataset.osel; try { localStorage.setItem("ivp-offer", String(offerSel)); } catch {} renderCogs(); });
 }
 function offerCalc(c, o){
-  const units = Math.max(1, n(o.units)), price = n(o.price), digital = !!c.noShipping;
+  const units = Math.max(1, n(o.units)), price = n(o.price) * subFactor(), digital = !!c.noShipping;
   const goods = units * (n(c.unitCost) + n(c.shipping));
   const ship = digital ? 0 : n(st.settings.shipPerOrder);
   const fees = price * n(st.settings.feePct)/100 + n(st.settings.feeFix);
@@ -919,7 +925,7 @@ function renderCogs(){
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num">${digital ? `<span class="badge na">Geen</span>` : ship ? `${fd(ship)}<br><small style="color:var(--dim)">per bestelling</small>` : `<a href="#expenses">instellen</a>`}<br>${chk("data-noship", p.id, digital, "Digitaal, geen verzending")}</td>
-      <td class="num">${bonusP ? `<span class="badge na">Levert niets op</span><br><small style="color:var(--dim)">geen omzet, geen kosten</small>` : !oc?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${oc.left<0?"bad":"good"})">${fd(oc.left)}</b> <span style="color:var(--muted)">(${Math.round(oc.pct*100)}%)</span><br><small style="color:var(--dim)">${esc(off.name)}: ${fd(oc.price)} voor ${oc.units} stuk${oc.units>1?"s":""}${oc.units>1?` · ${fd(oc.perUnit)} per stuk`:""}</small>`}</td>
+      <td class="num">${bonusP ? `<span class="badge na">Levert niets op</span><br><small style="color:var(--dim)">geen omzet, geen kosten</small>` : !oc?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${oc.left<0?"bad":"good"})">${fd(oc.left)}</b> <span style="color:var(--muted)">(${Math.round(oc.pct*100)}%)</span><br><small style="color:var(--dim)">${esc(off.name)}${subOn ? " + abonnement" : ""}: ${fd(oc.price)} voor ${oc.units} stuk${oc.units>1?"s":""}${oc.units>1?` · ${fd(oc.perUnit)} per stuk`:""}</small>`}</td>
       <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>`;
   renderOfferSeg(); renderOffers();
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
@@ -934,6 +940,7 @@ function renderCogs(){
   });
 }
 function renderOffers(){
+  $("offersSub").textContent = subOn ? `Met abonnement: alle prijzen ${n(st.settings.subPct ?? 20)}% lager. Zet het abonnement uit bovenaan de producttabel om de normale prijzen te zien.` : "Zoals je aanbiedingen in de winkel staan: wat de klant betaalt en hoeveel stuks er in één pakket gaan.";
   const prods = st.catalog.filter(p => !st.cogs[p.id]?.freeBonus);
   $("offersBox").innerHTML = prods.map(p => {
     const c = st.cogs[p.id] || {}, offers = offersOf(p.id, p), editing = offerEdit?.id === p.id;
@@ -1141,6 +1148,8 @@ $("preset").onchange = () => { try { localStorage.setItem("ivp-preset", $("prese
 $("customRange").hidden = $("preset").value !== "custom";
 [$("dFrom"), $("dTo")].forEach(i => i.onchange = () => { if (mcp && $("dFrom").value && $("dTo").value) loadAll(); });
 $("prodFilter").onchange = renderDashboard;
+$("subOn").onchange = () => { subOn = $("subOn").checked; try { localStorage.setItem("ivp-sub", subOn ? "1" : "0"); } catch {} renderCogs(); };
+$("subPct").onchange = () => { const v = Math.min(100, Math.max(0, n($("subPct").value))); write(() => db.doc(settingsPath()).set({...(TEST ? (st.testSettings||{}) : (st.realSettings||{})), subPct:v, updatedAt:Date.now()}), `Abonnementskorting ${v}% opgeslagen`); };
 $("dispCcy").value = disp;
 function applyCcy(full){
   document.querySelectorAll(".ccyLbl").forEach(el => el.textContent = disp);
