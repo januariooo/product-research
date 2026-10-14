@@ -640,6 +640,15 @@ function shopTotals(from, to){
   for (const r of st.shopDaily){ if (!inRange(r.day, from, to)) continue; t.total += n(r.total_sales); t.net += n(r.net_sales); t.gross += n(r.gross_sales); t.ret += Math.abs(n(r.returns)); t.orders += n(r.orders); }
   return t;
 }
+/* digital products (e-books) are shipped by email: no shipping cost */
+const isDigital = id => !!st.cogs[id]?.noShipping;
+function shipFactor(){
+  /* share of orders that contain a physical product; an order with only digital items costs no shipping */
+  const tot = shopTotals(st.range.from, st.range.to).orders;
+  if (!tot || !st.shopProducts.length) return 1;
+  const phys = st.shopProducts.reduce((a,r) => a + (isDigital(String(r.product_id||"")) ? 0 : n(r.orders)), 0);
+  return Math.min(1, phys / tot);
+}
 function cogsRatio(){
   /* share of net sales that is COGS, from the current-period product rows */
   const rate = productCostRate(); let cogs = 0, net = 0, missing = 0;
@@ -657,7 +666,7 @@ function periodCalc(from, to, ratio){
   const cogs = s.net * ratio;
   const fees = s.total * n(st.settings.feePct)/100 + s.orders * n(st.settings.feeFix);
   const exp = expensesFor(from, to);
-  const ship = s.orders * n(st.settings.shipPerOrder);
+  const ship = s.orders * n(st.settings.shipPerOrder) * shipFactor();
   const profit = s.net - cogs - ad.spend - fees - ship - exp;
   return {...s, ad:ad.spend, adValue:ad.value, cogs, fees, ship, exp, profit};
 }
@@ -681,7 +690,7 @@ function productRows(){
     o.cogsMissing = c == null;
     o.ad = o.id !== "__unknown" ? adSpendFor(R.from, R.to, o.id).spend : 0;
     o.fees = shopTot.total ? (o.total/shopTot.total) * (shopTot.total*n(st.settings.feePct)/100 + shopTot.orders*n(st.settings.feeFix)) : 0;
-    o.ship = o.orders * n(st.settings.shipPerOrder);
+    o.ship = isDigital(o.id) ? 0 : o.orders * n(st.settings.shipPerOrder);
     o.profit = o.net - o.cogs - o.ad - o.fees - o.ship;
     o.roas = o.ad > 0 ? o.total / o.ad : null;
     return o;
@@ -790,6 +799,7 @@ function renderLegend(){
   $("legend").querySelectorAll("input").forEach(i => i.onchange = () => { st.series[i.dataset.s] = i.checked; renderTrend(cogsRatio().ratio); });
 }
 function renderTrend(ratio){
+  const sf = shipFactor();
   const R = st.range, days = [];
   for (let d = R.from; d <= R.to; d = addDays(d,1)) days.push(d);
   const fx = n(st.settings.fx)||1;
@@ -797,7 +807,7 @@ function renderTrend(ratio){
   const shopBy = {}; st.shopDaily.forEach(r => shopBy[r.day] = r);
   const pts = days.map(d => {
     const r = shopBy[d] || {}; const net = n(r.net_sales), tot = n(r.total_sales), ord = n(r.orders);
-    const cogs = net*ratio, ad = adBy[d]||0, fees = tot*n(st.settings.feePct)/100 + ord*n(st.settings.feeFix), exp = expensesFor(d,d), ship = ord*n(st.settings.shipPerOrder);
+    const cogs = net*ratio, ad = adBy[d]||0, fees = tot*n(st.settings.feePct)/100 + ord*n(st.settings.feeFix), exp = expensesFor(d,d), ship = ord*n(st.settings.shipPerOrder)*sf;
     return {d, net, ad, cogs, ret:Math.abs(n(r.returns)), profit: net - cogs - ad - fees - ship - exp};
   });
   $("trendSub").textContent = `per dag · ${new Date(R.from).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})} – ${new Date(R.to).toLocaleDateString("nl-NL",{day:"numeric",month:"short"})}`;
@@ -871,26 +881,30 @@ function renderCogs(){
     st.catalog.map(p => {
       const c = st.cogs[p.id] || {}, os = orderStats(p.id);
       const per = n(c.perOrder) || (os ? Math.max(1, Math.round(os.units*10)/10) : 1);
-      const shipEach = ship / per;
+      const digital = !!c.noShipping, shipEach = digital ? 0 : ship / per;
       const unitCost = c.unitCost != null ? n(c.unitCost) + n(c.shipping) + shipEach : null;
       const margin = unitCost != null ? p.price - unitCost : null;
-      const orderCost = unitCost != null ? per*(n(c.unitCost) + n(c.shipping)) + ship : null;
+      const orderCost = unitCost != null ? per*(n(c.unitCost) + n(c.shipping)) + (digital ? 0 : ship) : null;
       const orderLine = os && orderCost != null ? `<br><small style="color:var(--muted)">Per bestelling: omzet ${fd(os.net)} − kosten ${fd(orderCost)} = <b style="color:var(--${os.net-orderCost<0?"bad":"good"})">${fd(os.net - orderCost)}</b></small>` : "";
       return `<tr><td><div class="pname">${p.img?`<img src="${esc(p.img)}" alt="">`:`<span class="ph"></span>`}<div><b>${esc(p.title)}</b><small>${esc(p.status||"")}</small></div></div></td>
       <td class="num">${fd(p.price)}</td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="unitCost" type="number" min="0" step="0.01" value="${toDisp(c.unitCost)}" placeholder="0,00" aria-label="Inkoopprijs ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="shipping" type="number" min="0" step="0.01" value="${toDisp(c.shipping)}" placeholder="0,00" aria-label="Extra kosten per stuk ${esc(p.title)}" style="${inStyle}"></td>
       <td class="num"><input class="cogsIn" data-id="${esc(p.id)}" data-f="perOrder" type="number" min="1" step="1" value="${c.perOrder ?? ""}" placeholder="${os ? (Math.round(os.units*10)/10).toLocaleString("nl-NL") : "1"}" aria-label="Stuks per bestelling ${esc(p.title)}" style="width:70px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:right"><br><small style="color:var(--dim)">${c.perOrder ? "zelf ingesteld" : os ? "gemiddelde uit verkopen" : "geen verkopen"}</small></td>
-      <td class="num">${fd(shipEach)}<br><small style="color:var(--dim)">${ship ? `${fd(ship)} ÷ ${per.toLocaleString("nl-NL")}` : `<a href="#expenses">instellen</a>`}</small></td>
+      <td class="num">${digital ? `<span class="badge na">Geen</span>` : fd(shipEach)}<br><small style="color:var(--dim)">${digital ? "digitaal product" : ship ? `${fd(ship)} ÷ ${per.toLocaleString("nl-NL")}` : `<a href="#expenses">instellen</a>`}</small><br><label style="display:inline-flex;gap:5px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:4px;cursor:pointer"><input type="checkbox" data-noship="${esc(p.id)}" ${digital?"checked":""} ${canWrite?"":"disabled"}> Digitaal, geen verzending</label></td>
       <td class="num">${margin==null?'<span class="badge mid">Ontbreekt</span>':`<b style="color:var(--${margin<0?"bad":"good"})">${fd(margin)}</b> <span style="color:var(--muted)">(${p.price?Math.round(margin/p.price*100):0}%)</span>`}${orderLine}</td>
       <td><button class="btn" type="button" data-savecogs="${esc(p.id)}" ${canWrite?"":"disabled"}>Opslaan</button></td></tr>`; }).join("")}</tbody></table>
     <p class="note" style="margin-top:10px">Marge per stuk = verkoopprijs − inkoop − extra kosten − jouw deel van de verzending (verzendkosten per bestelling gedeeld door het aantal stuks in een bestelling). De regel <i>per bestelling</i> gebruikt wat klanten echt betaalden, dus inclusief kortingen en gratis producten zoals bij 2+1.</p>`;
   document.querySelectorAll("[data-savecogs]").forEach(b => b.onclick = () => saveCogs(b.dataset.savecogs));
+  document.querySelectorAll("[data-noship]").forEach(cb => cb.onchange = () => {
+    const id = cb.dataset.noship, prev = st.cogs[id] || {}, p = st.catalog.find(x => x.id === id);
+    write(() => db.collection(colName("cogs")).doc(id).set({...prev, title:p?.title||prev.title||"", noShipping:cb.checked, updatedAt:Date.now()}), cb.checked ? "Geen verzendkosten voor dit product" : "Verzendkosten weer aan");
+  });
 }
 async function saveCogs(id){
   const get = f => document.querySelector(`.cogsIn[data-id="${CSS.escape(id)}"][data-f="${f}"]`).value;
   const p = st.catalog.find(x => x.id === id);
-  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), perOrder: get("perOrder")===""?null:Math.max(1, n(get("perOrder"))), updatedAt:Date.now()};
+  const body = {title:p?.title||"", unitCost: get("unitCost")===""?null:fromDisp(get("unitCost")), shipping:fromDisp(get("shipping")), perOrder: get("perOrder")===""?null:Math.max(1, n(get("perOrder"))), noShipping: !!st.cogs[id]?.noShipping, updatedAt:Date.now()};
   if (body.unitCost == null){ toast("Vul een inkoopprijs in."); return; }
   await write(() => db.collection(colName("cogs")).doc(id).set(body), "Inkoopprijs opgeslagen");
 }
